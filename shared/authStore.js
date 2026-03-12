@@ -24,12 +24,12 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  loginWithGoogle: async () => {
+  login: async ({ name, email }) => {
     set({ loading: true })
     try {
       const data = await api.login({
-        email: 'user@example.com',
-        name: 'משתמש חדש',
+        email,
+        name,
         picture: ''
       })
       if (typeof localStorage !== 'undefined') localStorage.setItem('token', data.token)
