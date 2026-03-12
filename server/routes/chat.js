@@ -441,6 +441,119 @@ async function streamMockResponse(res, text) {
   }
 }
 
+// POST /guest - Guest chat (no auth, no saving, streaming SSE)
+router.post('/guest', async (req, res) => {
+  try {
+    const { content, history } = req.body;
+
+    if (!content) {
+      return res.status(400).json({ error: 'Message content is required' });
+    }
+
+    const systemPrompt = await getSystemPrompt();
+    const userMessage = {
+      id: uuidv4(),
+      role: 'user',
+      content,
+      timestamp: new Date().toISOString()
+    };
+
+    // SSE setup
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    });
+
+    res.write(`data: ${JSON.stringify({ type: 'user_message', message: userMessage })}\n\n`);
+
+    // Build messages from history
+    const prevMessages = (history || []).map(m => ({ role: m.role, content: m.content }));
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      ...prevMessages,
+      { role: 'user', content }
+    ];
+
+    let fullContent = '';
+    const assistantId = uuidv4();
+
+    if (OPENAI_API_KEY) {
+      try {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${OPENAI_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages,
+            temperature: 0.7,
+            max_tokens: 1500,
+            stream: true,
+          }),
+        });
+
+        if (!response.ok) {
+          fullContent = generateMockResponse();
+          await streamMockResponse(res, fullContent);
+        } else {
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed || !trimmed.startsWith('data: ')) continue;
+              const payload = trimmed.slice(6);
+              if (payload === '[DONE]') continue;
+              try {
+                const parsed = JSON.parse(payload);
+                const delta = parsed.choices?.[0]?.delta?.content;
+                if (delta) {
+                  fullContent += delta;
+                  res.write(`data: ${JSON.stringify({ type: 'chunk', content: delta })}\n\n`);
+                }
+              } catch {}
+            }
+          }
+        }
+      } catch {
+        fullContent = generateMockResponse();
+        await streamMockResponse(res, fullContent);
+      }
+    } else {
+      fullContent = generateMockResponse();
+      await streamMockResponse(res, fullContent);
+    }
+
+    const assistantMessage = {
+      id: assistantId,
+      role: 'assistant',
+      content: fullContent,
+      timestamp: new Date().toISOString(),
+    };
+
+    res.write(`data: ${JSON.stringify({ type: 'done', message: assistantMessage })}\n\n`);
+    res.end();
+  } catch (error) {
+    console.error('Guest chat error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Internal server error' });
+    } else {
+      res.write(`data: ${JSON.stringify({ type: 'error', error: 'Internal server error' })}\n\n`);
+      res.end();
+    }
+  }
+});
+
 // DELETE /conversations/:id - Delete a conversation
 router.delete('/conversations/:id', async (req, res) => {
   try {

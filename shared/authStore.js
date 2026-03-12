@@ -4,16 +4,19 @@ import { api } from './api.js'
 export const useAuthStore = create((set, get) => ({
   user: null,
   token: typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null,
+  isGuest: typeof localStorage !== 'undefined' ? localStorage.getItem('isGuest') === 'true' : false,
   loading: false,
 
-  get isLoggedIn() { return !!get().token },
+  get isLoggedIn() { return !!get().token || get().isGuest },
   get isOnboarded() {
+    if (get().isGuest) return true
     const user = get().user
     if (!user) return false
     return !!(user.parentName && user.children?.length > 0 && user.challenges?.length > 0)
   },
 
   init: async () => {
+    if (get().isGuest) return
     const token = get().token
     if (!token) return
     try {
@@ -22,6 +25,15 @@ export const useAuthStore = create((set, get) => ({
     } catch {
       get().logout()
     }
+  },
+
+  loginAsGuest: () => {
+    if (typeof localStorage !== 'undefined') localStorage.setItem('isGuest', 'true')
+    set({
+      isGuest: true,
+      user: { parentName: 'אורח', email: '', children: [], challenges: [] },
+      token: null,
+    })
   },
 
   login: async ({ name, email }) => {
@@ -54,8 +66,11 @@ export const useAuthStore = create((set, get) => ({
   },
 
   logout: () => {
-    if (typeof localStorage !== 'undefined') localStorage.removeItem('token')
-    set({ user: null, token: null })
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('token')
+      localStorage.removeItem('isGuest')
+    }
+    set({ user: null, token: null, isGuest: false })
   },
 
   updateUser: (updates) => {

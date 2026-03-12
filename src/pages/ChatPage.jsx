@@ -51,9 +51,11 @@ export default function ChatPage() {
   /* ---- Auth store ---- */
   const user = useAuthStore((s) => s.user)
   const token = useAuthStore((s) => s.token)
-  const isLoggedIn = !!token
+  const isGuest = useAuthStore((s) => s.isGuest)
+  const isLoggedIn = !!token || isGuest
   const loading = useAuthStore((s) => s.loading)
   const login = useAuthStore((s) => s.login)
+  const loginAsGuest = useAuthStore((s) => s.loginAsGuest)
   const logout = useAuthStore((s) => s.logout)
 
   const isOnboarded =
@@ -98,12 +100,12 @@ export default function ChatPage() {
     }
   }, [isLoggedIn, conversations, currentConversation, selectConversation])
 
-  // Navigate to onboarding after login if not onboarded
+  // Navigate to onboarding after login if not onboarded (skip for guests)
   useEffect(() => {
-    if (isLoggedIn && user && !isOnboarded) {
+    if (isLoggedIn && !isGuest && user && !isOnboarded) {
       navigate('/onboarding')
     }
-  }, [isLoggedIn, user, isOnboarded, navigate])
+  }, [isLoggedIn, isGuest, user, isOnboarded, navigate])
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -244,6 +246,22 @@ export default function ChatPage() {
                 <span>{loading ? 'מתחבר...' : 'כניסה'}</span>
               </button>
             </form>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3 my-4">
+              <div className="flex-1 h-px bg-gray-200" />
+              <span className="text-xs text-text-secondary">או</span>
+              <div className="flex-1 h-px bg-gray-200" />
+            </div>
+
+            {/* Guest button */}
+            <button
+              onClick={loginAsGuest}
+              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gray-100 hover:bg-gray-200 rounded-2xl transition-all duration-200 text-text-secondary font-medium"
+            >
+              <span className="material-symbols-outlined text-lg">person_outline</span>
+              <span>כניסה כאורח</span>
+            </button>
 
             {/* Terms */}
             <p className="mt-6 text-xs text-text-secondary/70 leading-relaxed">
