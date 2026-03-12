@@ -1,0 +1,467 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuthStore } from '../../shared/authStore'
+import { CHALLENGES, PERSONALITIES, PARENTING_STYLES } from '../../shared/constants'
+
+export default function OnboardingPage() {
+  const navigate = useNavigate()
+  const completeOnboarding = useAuthStore(s => s.completeOnboarding)
+  const loading = useAuthStore(s => s.loading)
+
+  const [step, setStep] = useState(1)
+  const [parentName, setParentName] = useState('')
+  const [parentAge, setParentAge] = useState('')
+  const [parentStyle, setParentStyle] = useState('')
+  const [childName, setChildName] = useState('')
+  const [childBirthDate, setChildBirthDate] = useState('')
+  const [childGender, setChildGender] = useState('boy')
+  const [childPersonality, setChildPersonality] = useState('')
+  const [selectedChallenges, setSelectedChallenges] = useState([])
+  const [errors, setErrors] = useState({})
+
+  const progressPercent = Math.round((step / 3) * 100)
+
+  function validateStep1() {
+    const newErrors = {}
+    if (!parentName.trim()) newErrors.parentName = true
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  function validateStep2() {
+    const newErrors = {}
+    if (!childName.trim()) newErrors.childName = true
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  function handleNext() {
+    if (step === 1 && !validateStep1()) return
+    if (step === 2 && !validateStep2()) return
+    setErrors({})
+    setStep(s => s + 1)
+  }
+
+  function handleBack() {
+    setErrors({})
+    setStep(s => s - 1)
+  }
+
+  function toggleChallenge(value) {
+    setSelectedChallenges(prev =>
+      prev.includes(value)
+        ? prev.filter(c => c !== value)
+        : [...prev, value]
+    )
+  }
+
+  async function handleSubmit() {
+    await completeOnboarding({
+      parentName,
+      parentAge,
+      parentStyle,
+      children: [{
+        name: childName,
+        birthDate: childBirthDate,
+        gender: childGender,
+        personality: childPersonality,
+      }],
+      challenges: selectedChallenges,
+    })
+    navigate('/')
+  }
+
+  return (
+    <div dir="rtl" className="min-h-screen bg-gradient-to-br from-background-light via-white to-primary-light/30 py-6 px-4 sm:py-10">
+      <div className="max-w-xl mx-auto">
+
+        {/* Progress Section */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-bold text-text-secondary">
+              שלב {step} מתוך 3
+            </span>
+            <span className="text-sm font-bold text-primary">
+              {progressPercent}%
+            </span>
+          </div>
+          <div className="h-3 bg-gray-100 rounded-full overflow-hidden shadow-inner">
+            <div
+              className="h-full rounded-full bg-gradient-to-l from-primary via-primary-dark to-purple-600 transition-all duration-700 ease-out relative"
+              style={{
+                width: `${progressPercent}%`,
+                boxShadow: '0 0 16px rgba(var(--color-primary-rgb, 99 102 241) / 0.5)',
+              }}
+            >
+              <div
+                className="absolute inset-0 rounded-full"
+                style={{
+                  background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%)',
+                  animation: 'shimmer 2s infinite',
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Step 1 - Parent Details */}
+        {step === 1 && (
+          <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 overflow-hidden relative">
+            {/* Decorative Blobs */}
+            <div className="absolute -top-20 -left-20 w-60 h-60 bg-gradient-to-br from-primary/20 to-purple-300/20 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-16 -right-16 w-48 h-48 bg-gradient-to-tr from-pink-200/20 to-primary/10 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="relative p-6 sm:p-8">
+              {/* Avatar */}
+              <div className="flex justify-center mb-6">
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-lg shadow-primary/30">
+                  <span className="material-symbols-rounded text-white text-4xl">person</span>
+                </div>
+              </div>
+
+              {/* Title */}
+              <h1 className="text-3xl font-black tracking-tight text-text-main text-center mb-2">
+                ספר/י לנו על עצמך
+              </h1>
+              <p className="text-text-secondary text-center mb-8 text-sm">
+                המידע עוזר לנו להתאים את הייעוץ אליך
+              </p>
+
+              {/* Fields */}
+              <div className="space-y-5">
+                {/* Parent Name */}
+                <div>
+                  <label className="block text-sm font-bold text-text-main mb-2">שם ההורה</label>
+                  <div className="relative">
+                    <span className="material-symbols-rounded absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl">badge</span>
+                    <input
+                      type="text"
+                      value={parentName}
+                      onChange={e => { setParentName(e.target.value); setErrors(prev => ({ ...prev, parentName: false })) }}
+                      placeholder="השם שלך"
+                      className={`w-full h-14 pr-12 pl-4 rounded-2xl border-2 bg-white/70 text-text-main placeholder-gray-400 text-base font-medium outline-none transition-all duration-200 focus:ring-4 focus:ring-primary/10 focus:border-primary ${
+                        errors.parentName ? 'border-red-400 ring-4 ring-red-100' : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    />
+                  </div>
+                  {errors.parentName && (
+                    <p className="text-red-500 text-xs mt-1.5 font-medium flex items-center gap-1">
+                      <span className="material-symbols-rounded text-sm">error</span>
+                      שדה חובה
+                    </p>
+                  )}
+                </div>
+
+                {/* Age */}
+                <div>
+                  <label className="block text-sm font-bold text-text-main mb-2">גיל</label>
+                  <div className="relative">
+                    <span className="material-symbols-rounded absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl">cake</span>
+                    <input
+                      type="number"
+                      value={parentAge}
+                      onChange={e => setParentAge(e.target.value)}
+                      placeholder="הגיל שלך"
+                      min="16"
+                      max="99"
+                      className="w-full h-14 pr-12 pl-4 rounded-2xl border-2 border-gray-200 bg-white/70 text-text-main placeholder-gray-400 text-base font-medium outline-none transition-all duration-200 hover:border-gray-300 focus:ring-4 focus:ring-primary/10 focus:border-primary"
+                    />
+                  </div>
+                </div>
+
+                {/* Parenting Style */}
+                <div>
+                  <label className="block text-sm font-bold text-text-main mb-2">סגנון הורות</label>
+                  <div className="relative">
+                    <span className="material-symbols-rounded absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl">psychology</span>
+                    <select
+                      value={parentStyle}
+                      onChange={e => setParentStyle(e.target.value)}
+                      className="w-full h-14 pr-12 pl-4 rounded-2xl border-2 border-gray-200 bg-white/70 text-text-main text-base font-medium outline-none transition-all duration-200 hover:border-gray-300 focus:ring-4 focus:ring-primary/10 focus:border-primary appearance-none cursor-pointer"
+                    >
+                      <option value="">בחר/י סגנון</option>
+                      {PARENTING_STYLES.map(s => (
+                        <option key={s.value} value={s.value}>{s.label}</option>
+                      ))}
+                    </select>
+                    <span className="material-symbols-rounded absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl pointer-events-none">expand_more</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Trust Badges */}
+              <div className="flex items-center justify-center gap-6 mt-8 pt-6 border-t border-gray-100">
+                <div className="flex items-center gap-1.5 text-xs text-text-secondary">
+                  <span className="material-symbols-rounded text-green-500 text-base">lock</span>
+                  מאובטח ופרטי
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-text-secondary">
+                  <span className="material-symbols-rounded text-blue-500 text-base">verified_user</span>
+                  מוגן ומאושר
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Step 2 - Child Details */}
+        {step === 2 && (
+          <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 overflow-hidden relative">
+            {/* Decorative Blobs */}
+            <div className="absolute -top-20 -right-20 w-56 h-56 bg-gradient-to-bl from-pink-200/20 to-primary/15 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-20 -left-20 w-52 h-52 bg-gradient-to-tr from-primary/15 to-yellow-200/20 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="relative p-6 sm:p-8">
+              {/* Avatar */}
+              <div className="flex justify-center mb-6">
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-pink-500 to-primary flex items-center justify-center shadow-lg shadow-pink-400/30">
+                  <span className="material-symbols-rounded text-white text-4xl">child_care</span>
+                </div>
+              </div>
+
+              {/* Title */}
+              <h1 className="text-3xl font-black tracking-tight text-text-main text-center mb-2">
+                ספר/י לנו על הילד/ה
+              </h1>
+              <p className="text-text-secondary text-center mb-8 text-sm">
+                כדי שנוכל להתאים את התוכן באופן אישי
+              </p>
+
+              {/* Fields */}
+              <div className="space-y-5">
+                {/* Child Name */}
+                <div>
+                  <label className="block text-sm font-bold text-text-main mb-2">שם הילד/ה</label>
+                  <div className="relative">
+                    <span className="material-symbols-rounded absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl">badge</span>
+                    <input
+                      type="text"
+                      value={childName}
+                      onChange={e => { setChildName(e.target.value); setErrors(prev => ({ ...prev, childName: false })) }}
+                      placeholder="שם הילד/ה"
+                      className={`w-full h-14 pr-12 pl-4 rounded-2xl border-2 bg-white/70 text-text-main placeholder-gray-400 text-base font-medium outline-none transition-all duration-200 focus:ring-4 focus:ring-primary/10 focus:border-primary ${
+                        errors.childName ? 'border-red-400 ring-4 ring-red-100' : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    />
+                  </div>
+                  {errors.childName && (
+                    <p className="text-red-500 text-xs mt-1.5 font-medium flex items-center gap-1">
+                      <span className="material-symbols-rounded text-sm">error</span>
+                      שדה חובה
+                    </p>
+                  )}
+                </div>
+
+                {/* Birth Date + Gender - 2 Column Grid */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Birth Date */}
+                  <div>
+                    <label className="block text-sm font-bold text-text-main mb-2">תאריך לידה</label>
+                    <div className="relative">
+                      <span className="material-symbols-rounded absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl">calendar_month</span>
+                      <input
+                        type="date"
+                        value={childBirthDate}
+                        onChange={e => setChildBirthDate(e.target.value)}
+                        className="w-full h-14 pr-12 pl-3 rounded-2xl border-2 border-gray-200 bg-white/70 text-text-main text-base font-medium outline-none transition-all duration-200 hover:border-gray-300 focus:ring-4 focus:ring-primary/10 focus:border-primary"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Gender Toggle */}
+                  <div>
+                    <label className="block text-sm font-bold text-text-main mb-2">מין</label>
+                    <div className="flex h-14 rounded-2xl border-2 border-gray-200 overflow-hidden bg-white/70">
+                      <label className={`flex-1 flex items-center justify-center cursor-pointer transition-all duration-200 text-sm font-bold ${
+                        childGender === 'boy' ? 'radio-checked-bg bg-primary text-white shadow-inner' : 'text-text-secondary hover:bg-gray-50'
+                      }`}>
+                        <input
+                          type="radio"
+                          name="gender"
+                          value="boy"
+                          checked={childGender === 'boy'}
+                          onChange={e => setChildGender(e.target.value)}
+                          className="sr-only"
+                        />
+                        <span className="material-symbols-rounded text-lg me-1">boy</span>
+                        בן
+                      </label>
+                      <label className={`flex-1 flex items-center justify-center cursor-pointer transition-all duration-200 text-sm font-bold border-r ${
+                        childGender === 'girl' ? 'radio-checked-bg bg-primary text-white shadow-inner' : 'text-text-secondary hover:bg-gray-50 border-gray-200'
+                      }`}>
+                        <input
+                          type="radio"
+                          name="gender"
+                          value="girl"
+                          checked={childGender === 'girl'}
+                          onChange={e => setChildGender(e.target.value)}
+                          className="sr-only"
+                        />
+                        <span className="material-symbols-rounded text-lg me-1">girl</span>
+                        בת
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Personality */}
+                <div>
+                  <label className="block text-sm font-bold text-text-main mb-2">מאפיין אישיות</label>
+                  <div className="relative">
+                    <span className="material-symbols-rounded absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl">emoji_objects</span>
+                    <select
+                      value={childPersonality}
+                      onChange={e => setChildPersonality(e.target.value)}
+                      className="w-full h-14 pr-12 pl-4 rounded-2xl border-2 border-gray-200 bg-white/70 text-text-main text-base font-medium outline-none transition-all duration-200 hover:border-gray-300 focus:ring-4 focus:ring-primary/10 focus:border-primary appearance-none cursor-pointer"
+                    >
+                      <option value="">בחר/י מאפיין</option>
+                      {PERSONALITIES.map(p => (
+                        <option key={p.value} value={p.value}>{p.label}</option>
+                      ))}
+                    </select>
+                    <span className="material-symbols-rounded absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl pointer-events-none">expand_more</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Trust Badges */}
+              <div className="flex items-center justify-center gap-6 mt-8 pt-6 border-t border-gray-100">
+                <div className="flex items-center gap-1.5 text-xs text-text-secondary">
+                  <span className="material-symbols-rounded text-green-500 text-base">lock</span>
+                  מאובטח ופרטי
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-text-secondary">
+                  <span className="material-symbols-rounded text-blue-500 text-base">verified_user</span>
+                  מוגן ומאושר
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3 - Challenges */}
+        {step === 3 && (
+          <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 overflow-hidden relative">
+            {/* Decorative Blobs */}
+            <div className="absolute -top-16 -left-16 w-52 h-52 bg-gradient-to-br from-yellow-200/20 to-primary/15 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-16 -right-16 w-48 h-48 bg-gradient-to-tl from-primary/15 to-pink-200/15 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="relative p-6 sm:p-8">
+              {/* Avatar */}
+              <div className="flex justify-center mb-6">
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-500 to-primary flex items-center justify-center shadow-lg shadow-amber-400/30">
+                  <span className="material-symbols-rounded text-white text-4xl">target</span>
+                </div>
+              </div>
+
+              {/* Title */}
+              <h1 className="text-3xl font-black tracking-tight text-text-main text-center mb-2">
+                מה האתגר המרכזי?
+              </h1>
+              <p className="text-text-secondary text-center mb-8 text-sm">
+                בחר/י את האתגרים שהכי רלוונטיים עבורך
+              </p>
+
+              {/* Challenges Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {CHALLENGES.map(challenge => {
+                  const isSelected = selectedChallenges.includes(challenge.value)
+                  return (
+                    <label key={challenge.value} className="cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleChallenge(challenge.value)}
+                        className="challenge-checkbox sr-only"
+                      />
+                      <div className={`relative p-4 rounded-2xl border-2 transition-all duration-200 text-center ${
+                        isSelected
+                          ? 'border-primary bg-primary/5 shadow-lg shadow-primary/10'
+                          : 'border-transparent bg-white/60 hover:shadow-md hover:border-primary/30'
+                      }`}>
+                        {/* Icon Container */}
+                        <div className={`icon-container w-12 h-12 rounded-xl mx-auto mb-3 flex items-center justify-center transition-all duration-200 ${
+                          isSelected
+                            ? 'bg-primary text-white shadow-md shadow-primary/30'
+                            : 'bg-gray-100 text-gray-500 group-hover:bg-primary/10 group-hover:text-primary'
+                        }`}>
+                          <span className="material-symbols-rounded text-2xl">{challenge.icon}</span>
+                        </div>
+
+                        {/* Label */}
+                        <span className={`text-sm font-bold block transition-colors duration-200 ${
+                          isSelected ? 'text-primary' : 'text-text-main'
+                        }`}>
+                          {challenge.label}
+                        </span>
+
+                        {/* Check Icon Overlay */}
+                        {isSelected && (
+                          <div className="check-icon absolute top-2 right-2 w-6 h-6 rounded-full bg-primary flex items-center justify-center shadow-sm">
+                            <span className="material-symbols-rounded text-white text-sm">check</span>
+                          </div>
+                        )}
+                      </div>
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Navigation Buttons */}
+        <div className="flex items-center gap-3 mt-6">
+          {step > 1 && (
+            <button
+              type="button"
+              onClick={handleBack}
+              className="h-14 px-6 rounded-xl font-bold text-text-secondary hover:text-text-main hover:bg-white/60 transition-all duration-200 flex items-center gap-2"
+            >
+              <span className="material-symbols-rounded text-xl">arrow_forward</span>
+              חזור
+            </button>
+          )}
+
+          {step < 3 ? (
+            <button
+              type="button"
+              onClick={handleNext}
+              className="flex-1 h-14 bg-primary rounded-xl font-bold text-lg text-white shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 hover:brightness-110 active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2"
+            >
+              המשך
+              <span className="material-symbols-rounded text-xl">arrow_back</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={loading}
+              className="flex-1 h-14 bg-gradient-to-l from-primary to-purple-600 rounded-xl font-bold text-lg text-white shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 hover:brightness-110 active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <>
+                  <span className="material-symbols-rounded animate-spin text-xl">progress_activity</span>
+                  שומר...
+                </>
+              ) : (
+                <>
+                  סיום והתחלה
+                  <span className="material-symbols-rounded text-xl">rocket_launch</span>
+                </>
+              )}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Shimmer Animation */}
+      <style>{`
+        @keyframes shimmer {
+          0% { transform: translateX(100%); }
+          100% { transform: translateX(-100%); }
+        }
+      `}</style>
+    </div>
+  )
+}

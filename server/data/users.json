@@ -1,0 +1,29 @@
+[
+  {
+    "id": "136776b0-7266-444e-8d57-ef1b84235c65",
+    "email": "user@example.com",
+    "name": "משתמש חדש",
+    "picture": "",
+    "parentName": "שכוייח",
+    "parentAge": 45,
+    "parentStyle": "",
+    "children": [
+      {
+        "id": "5f017e14-73b5-4c8f-a7d6-a9fdc9b89083",
+        "name": "יואביקו",
+        "birthDate": "2026-02-06",
+        "gender": "boy",
+        "personality": "שתאק"
+      }
+    ],
+    "challenges": [
+      "tantrums"
+    ],
+    "conversations": [
+      "cea6ebb4-fd54-414f-a127-49be7badb9a1",
+      "cd40a096-9863-40ea-9e9c-691963e444ed",
+      "45b34a52-c804-4000-8dd3-7c43724f9b62"
+    ],
+    "createdAt": "2026-03-12T16:58:50.404Z"
+  }
+]
