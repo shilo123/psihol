@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd /c/Users/Administrator/psihologit/server && npm ls 2>&1 | head -20)",
+      "Bash(npm install:*)",
+      "Bash(cd /c/Users/Administrator/psihologit && npx vite --host 2>&1)",
+      "Bash(curl -s http://localhost:5173/ 2>&1 | head -30)",
+      "Bash(curl -s http://localhost:3001/api/health 2>&1)",
+      "Bash(curl -s http://localhost:5173/ | grep -c \"app\" && curl -s http://localhost:3001/api/admin/system-prompt)",
+      "Bash(curl -s http://localhost:5173/api/health)",
+      "Bash(sleep 2 && curl -s http://localhost:3001/api/health && echo \"\" && curl -s http://localhost:5173/api/health)",
+      "Bash(sleep 3 && curl -s http://localhost:3001/api/admin/users && echo \"\" && curl -s http://localhost:3001/api/admin/stats)",
+      "WebFetch(domain:localhost)",
+      "Bash(curl -s http://localhost:5173/api/health 2>&1 && echo \"\" && curl -s http://localhost:3001/api/health 2>&1)",
+      "Bash(cd /c/Users/Administrator/psihologit && npm uninstall vue vue-router pinia @vitejs/plugin-vue vite-plugin-vue-devtools 2>&1)",
+      "Bash(taskkill //F //IM node.exe 2>/dev/null; sleep 1; echo \"killed\")",
+      "Bash(curl -s http://localhost:5173/src/main.jsx 2>&1 | head -20)"
+    ]
+  }
+}
