@@ -13,14 +13,29 @@ export default function OnboardingPage() {
   const [parentName, setParentName] = useState('')
   const [parentAge, setParentAge] = useState('')
   const [parentStyle, setParentStyle] = useState('')
-  const [childName, setChildName] = useState('')
-  const [childBirthDate, setChildBirthDate] = useState('')
-  const [childGender, setChildGender] = useState('boy')
-  const [childPersonality, setChildPersonality] = useState('')
+
+  // Multi-child support
+  const [children, setChildren] = useState([
+    { name: '', birthDate: '', gender: 'boy', personality: '' }
+  ])
   const [selectedChallenges, setSelectedChallenges] = useState([])
   const [errors, setErrors] = useState({})
 
   const progressPercent = Math.round((step / 3) * 100)
+
+  function updateChild(index, field, value) {
+    setChildren(prev => prev.map((c, i) => i === index ? { ...c, [field]: value } : c))
+    if (field === 'name') setErrors(prev => ({ ...prev, [`childName_${index}`]: false }))
+  }
+
+  function addChild() {
+    setChildren(prev => [...prev, { name: '', birthDate: '', gender: 'boy', personality: '' }])
+  }
+
+  function removeChild(index) {
+    if (children.length <= 1) return
+    setChildren(prev => prev.filter((_, i) => i !== index))
+  }
 
   function validateStep1() {
     const newErrors = {}
@@ -31,7 +46,9 @@ export default function OnboardingPage() {
 
   function validateStep2() {
     const newErrors = {}
-    if (!childName.trim()) newErrors.childName = true
+    children.forEach((child, i) => {
+      if (!child.name.trim()) newErrors[`childName_${i}`] = true
+    })
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -61,12 +78,7 @@ export default function OnboardingPage() {
       parentName,
       parentAge,
       parentStyle,
-      children: [{
-        name: childName,
-        birthDate: childBirthDate,
-        gender: childGender,
-        personality: childPersonality,
-      }],
+      children: children.filter(c => c.name.trim()),
       challenges: selectedChallenges,
     })
     navigate('/')
@@ -205,7 +217,7 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* Step 2 - Child Details */}
+        {/* Step 2 - Children Details */}
         {step === 2 && (
           <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 overflow-hidden relative">
             {/* Decorative Blobs */}
@@ -222,102 +234,136 @@ export default function OnboardingPage() {
 
               {/* Title */}
               <h1 className="text-3xl font-black tracking-tight text-text-main text-center mb-2">
-                ספר/י לנו על הילד/ה
+                ספר/י לנו על הילדים
               </h1>
               <p className="text-text-secondary text-center mb-8 text-sm">
                 כדי שנוכל להתאים את התוכן באופן אישי
               </p>
 
-              {/* Fields */}
-              <div className="space-y-5">
-                {/* Child Name */}
-                <div>
-                  <label className="block text-sm font-bold text-text-main mb-2">שם הילד/ה</label>
-                  <div className="relative">
-                    <span className="material-symbols-rounded absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl">badge</span>
-                    <input
-                      type="text"
-                      value={childName}
-                      onChange={e => { setChildName(e.target.value); setErrors(prev => ({ ...prev, childName: false })) }}
-                      placeholder="שם הילד/ה"
-                      className={`w-full h-14 pr-12 pl-4 rounded-2xl border-2 bg-white/70 text-text-main placeholder-gray-400 text-base font-medium outline-none transition-all duration-200 focus:ring-4 focus:ring-primary/10 focus:border-primary ${
-                        errors.childName ? 'border-red-400 ring-4 ring-red-100' : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    />
-                  </div>
-                  {errors.childName && (
-                    <p className="text-red-500 text-xs mt-1.5 font-medium flex items-center gap-1">
-                      <span className="material-symbols-rounded text-sm">error</span>
-                      שדה חובה
-                    </p>
-                  )}
-                </div>
+              {/* Children list */}
+              <div className="space-y-6">
+                {children.map((child, idx) => (
+                  <div key={idx} className={`space-y-4 ${idx > 0 ? 'pt-5 border-t-2 border-dashed border-primary/20' : ''}`}>
+                    {/* Child header */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className={`size-8 rounded-full flex items-center justify-center text-white text-sm font-bold ${
+                          child.gender === 'girl' ? 'bg-gradient-to-br from-pink-400 to-rose-500' : 'bg-gradient-to-br from-blue-400 to-indigo-500'
+                        }`}>
+                          {idx + 1}
+                        </div>
+                        <span className="text-sm font-bold text-text-main">
+                          {child.name || `ילד/ה ${idx + 1}`}
+                        </span>
+                      </div>
+                      {children.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeChild(idx)}
+                          className="size-8 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all"
+                        >
+                          <span className="material-symbols-rounded text-lg">close</span>
+                        </button>
+                      )}
+                    </div>
 
-                {/* Birth Date + Gender - 2 Column Grid */}
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Birth Date */}
-                  <div>
-                    <label className="block text-sm font-bold text-text-main mb-2">תאריך לידה</label>
-                    <BirthDatePicker
-                      value={childBirthDate}
-                      onChange={setChildBirthDate}
-                    />
-                  </div>
+                    {/* Child Name */}
+                    <div>
+                      <label className="block text-sm font-bold text-text-main mb-2">שם הילד/ה</label>
+                      <div className="relative">
+                        <span className="material-symbols-rounded absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl">badge</span>
+                        <input
+                          type="text"
+                          value={child.name}
+                          onChange={e => updateChild(idx, 'name', e.target.value)}
+                          placeholder="שם הילד/ה"
+                          className={`w-full h-14 pr-12 pl-4 rounded-2xl border-2 bg-white/70 text-text-main placeholder-gray-400 text-base font-medium outline-none transition-all duration-200 focus:ring-4 focus:ring-primary/10 focus:border-primary ${
+                            errors[`childName_${idx}`] ? 'border-red-400 ring-4 ring-red-100' : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                        />
+                      </div>
+                      {errors[`childName_${idx}`] && (
+                        <p className="text-red-500 text-xs mt-1.5 font-medium flex items-center gap-1">
+                          <span className="material-symbols-rounded text-sm">error</span>
+                          שדה חובה
+                        </p>
+                      )}
+                    </div>
 
-                  {/* Gender Toggle */}
-                  <div>
-                    <label className="block text-sm font-bold text-text-main mb-2">מין</label>
-                    <div className="flex h-14 rounded-2xl border-2 border-gray-200 overflow-hidden bg-white/70">
-                      <label className={`flex-1 flex items-center justify-center cursor-pointer transition-all duration-200 text-sm font-bold ${
-                        childGender === 'boy' ? 'radio-checked-bg bg-primary text-white shadow-inner' : 'text-text-secondary hover:bg-gray-50'
-                      }`}>
-                        <input
-                          type="radio"
-                          name="gender"
-                          value="boy"
-                          checked={childGender === 'boy'}
-                          onChange={e => setChildGender(e.target.value)}
-                          className="sr-only"
+                    {/* Birth Date + Gender */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-bold text-text-main mb-2">תאריך לידה</label>
+                        <BirthDatePicker
+                          value={child.birthDate}
+                          onChange={(date) => updateChild(idx, 'birthDate', date)}
                         />
-                        <span className="material-symbols-rounded text-lg me-1">boy</span>
-                        בן
-                      </label>
-                      <label className={`flex-1 flex items-center justify-center cursor-pointer transition-all duration-200 text-sm font-bold border-r ${
-                        childGender === 'girl' ? 'radio-checked-bg bg-primary text-white shadow-inner' : 'text-text-secondary hover:bg-gray-50 border-gray-200'
-                      }`}>
-                        <input
-                          type="radio"
-                          name="gender"
-                          value="girl"
-                          checked={childGender === 'girl'}
-                          onChange={e => setChildGender(e.target.value)}
-                          className="sr-only"
-                        />
-                        <span className="material-symbols-rounded text-lg me-1">girl</span>
-                        בת
-                      </label>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-text-main mb-2">מין</label>
+                        <div className="flex h-14 rounded-2xl border-2 border-gray-200 overflow-hidden bg-white/70">
+                          <label className={`flex-1 flex items-center justify-center cursor-pointer transition-all duration-200 text-sm font-bold ${
+                            child.gender === 'boy' ? 'bg-primary text-white shadow-inner' : 'text-text-secondary hover:bg-gray-50'
+                          }`}>
+                            <input
+                              type="radio"
+                              name={`gender_${idx}`}
+                              value="boy"
+                              checked={child.gender === 'boy'}
+                              onChange={() => updateChild(idx, 'gender', 'boy')}
+                              className="sr-only"
+                            />
+                            <span className="material-symbols-rounded text-lg me-1">boy</span>
+                            בן
+                          </label>
+                          <label className={`flex-1 flex items-center justify-center cursor-pointer transition-all duration-200 text-sm font-bold border-r ${
+                            child.gender === 'girl' ? 'bg-primary text-white shadow-inner' : 'text-text-secondary hover:bg-gray-50 border-gray-200'
+                          }`}>
+                            <input
+                              type="radio"
+                              name={`gender_${idx}`}
+                              value="girl"
+                              checked={child.gender === 'girl'}
+                              onChange={() => updateChild(idx, 'gender', 'girl')}
+                              className="sr-only"
+                            />
+                            <span className="material-symbols-rounded text-lg me-1">girl</span>
+                            בת
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Personality */}
+                    <div>
+                      <label className="block text-sm font-bold text-text-main mb-2">מאפיין אישיות</label>
+                      <div className="relative">
+                        <span className="material-symbols-rounded absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl">emoji_objects</span>
+                        <select
+                          value={child.personality}
+                          onChange={e => updateChild(idx, 'personality', e.target.value)}
+                          className="w-full h-14 pr-12 pl-4 rounded-2xl border-2 border-gray-200 bg-white/70 text-text-main text-base font-medium outline-none transition-all duration-200 hover:border-gray-300 focus:ring-4 focus:ring-primary/10 focus:border-primary appearance-none cursor-pointer"
+                        >
+                          <option value="">בחר/י מאפיין</option>
+                          {PERSONALITIES.map(p => (
+                            <option key={p.value} value={p.value}>{p.label}</option>
+                          ))}
+                        </select>
+                        <span className="material-symbols-rounded absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl pointer-events-none">expand_more</span>
+                      </div>
                     </div>
                   </div>
-                </div>
+                ))}
 
-                {/* Personality */}
-                <div>
-                  <label className="block text-sm font-bold text-text-main mb-2">מאפיין אישיות</label>
-                  <div className="relative">
-                    <span className="material-symbols-rounded absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl">emoji_objects</span>
-                    <select
-                      value={childPersonality}
-                      onChange={e => setChildPersonality(e.target.value)}
-                      className="w-full h-14 pr-12 pl-4 rounded-2xl border-2 border-gray-200 bg-white/70 text-text-main text-base font-medium outline-none transition-all duration-200 hover:border-gray-300 focus:ring-4 focus:ring-primary/10 focus:border-primary appearance-none cursor-pointer"
-                    >
-                      <option value="">בחר/י מאפיין</option>
-                      {PERSONALITIES.map(p => (
-                        <option key={p.value} value={p.value}>{p.label}</option>
-                      ))}
-                    </select>
-                    <span className="material-symbols-rounded absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl pointer-events-none">expand_more</span>
-                  </div>
-                </div>
+                {/* Add child button */}
+                <button
+                  type="button"
+                  onClick={addChild}
+                  className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl border-2 border-dashed border-primary/30 text-primary font-bold text-sm hover:bg-primary/5 hover:border-primary/50 transition-all duration-200"
+                >
+                  <span className="material-symbols-rounded text-xl">add_circle</span>
+                  הוספת ילד/ה נוסף/ת
+                </button>
               </div>
 
               {/* Trust Badges */}
