@@ -118,6 +118,9 @@ export default function ChatPage() {
   const [loginName, setLoginName] = useState('')
   const [loginEmail, setLoginEmail] = useState('')
 
+  /* ---- Demo names ---- */
+  const DEMO_FIRST_NAMES = ['נועה', 'יוסי', 'מיכל', 'אורי', 'דנה', 'עומר', 'שירה', 'איתי', 'רונית', 'גיל', 'תמר', 'אלון', 'ליאת', 'עידו', 'הדס']
+
   /* ---- Handlers ---- */
   async function handleLogin(e) {
     e?.preventDefault()
@@ -126,6 +129,14 @@ export default function ChatPage() {
     if (u && !(u.parentName && u.children?.length > 0 && u.challenges?.length > 0)) {
       navigate('/onboarding')
     }
+  }
+
+  async function handleDemoLogin() {
+    const name = DEMO_FIRST_NAMES[Math.floor(Math.random() * DEMO_FIRST_NAMES.length)]
+    const id = Math.floor(Math.random() * 9000) + 1000
+    const email = `demo-${id}@psihologit.app`
+    const u = await login({ name, email })
+    if (u) navigate('/onboarding')
   }
 
   async function handleSend(e) {
@@ -240,10 +251,20 @@ export default function ChatPage() {
               <div className="flex-1 h-px bg-gray-200" />
             </div>
 
+            {/* Demo user button */}
+            <button
+              onClick={handleDemoLogin}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-l from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 text-white font-semibold disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-lg">science</span>
+              <span>כניסת משתמש דמו</span>
+            </button>
+
             {/* Guest button */}
             <button
               onClick={loginAsGuest}
-              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gray-100 hover:bg-gray-200 rounded-2xl transition-all duration-200 text-text-secondary font-medium"
+              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gray-100 hover:bg-gray-200 rounded-2xl transition-all duration-200 text-text-secondary font-medium mt-2"
             >
               <span className="material-symbols-outlined text-lg">person_outline</span>
               <span>כניסה כאורח</span>
