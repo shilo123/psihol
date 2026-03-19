@@ -15,7 +15,8 @@ import {
 
 const router = Router();
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || null;
+// Read at runtime, not import time (dotenv loads after imports)
+function getOpenAIKey() { return process.env.OPENAI_API_KEY || null; }
 const MAX_MESSAGES_BEFORE_SUMMARY = 20;
 
 // ============================================================
@@ -112,7 +113,7 @@ async function streamMockResponse(res, text) {
 
 // Summarize old messages when history is too long
 async function summarizeHistory(messages) {
-  if (!OPENAI_API_KEY || messages.length <= MAX_MESSAGES_BEFORE_SUMMARY) {
+  if (!getOpenAIKey() || messages.length <= MAX_MESSAGES_BEFORE_SUMMARY) {
     return null;
   }
 
@@ -131,7 +132,7 @@ async function summarizeHistory(messages) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Authorization': `Bearer ${getOpenAIKey()}`,
       },
       body: JSON.stringify({
         model: 'gpt-4.1-mini',
@@ -187,13 +188,13 @@ function estimateTokens(text) {
 async function streamOpenAI(res, messages) {
   let fullContent = '';
 
-  if (OPENAI_API_KEY) {
+  if (getOpenAIKey()) {
     try {
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+          'Authorization': `Bearer ${getOpenAIKey()}`,
         },
         body: JSON.stringify({
           model: 'gpt-4.1',
@@ -251,7 +252,7 @@ async function streamOpenAI(res, messages) {
       await streamMockResponse(res, fullContent);
     }
   } else {
-    console.log('[MOCK MODE] No OPENAI_API_KEY set.');
+    console.log('[MOCK MODE] No OPENAI_API_KEY set.', 'env check:', !!process.env.OPENAI_API_KEY);
     fullContent = generateMockResponse();
     await streamMockResponse(res, fullContent);
   }
