@@ -1,6 +1,5 @@
 import { create } from 'zustand'
 import { api } from './api.js'
-import { useAuthStore } from './authStore.js'
 import { toast } from './toastStore.js'
 
 function parseSSEStream(body, { onUserMessage, onChunk, onDone, onError }) {
@@ -46,7 +45,6 @@ export const useChatStore = create((set, get) => ({
   streamingContent: '',
 
   loadConversations: async () => {
-    if (useAuthStore.getState().isGuest) return
     set({ loading: true })
     try {
       const conversations = await api.getConversations()
@@ -58,21 +56,6 @@ export const useChatStore = create((set, get) => ({
   },
 
   createConversation: async (title) => {
-    if (useAuthStore.getState().isGuest) {
-      const conv = {
-        id: 'guest-' + Date.now(),
-        title: title || 'שיחה חדשה',
-        createdAt: new Date().toISOString(),
-        messageCount: 0,
-      }
-      set((state) => ({
-        conversations: [conv, ...state.conversations],
-        currentConversation: conv,
-        messages: [],
-      }))
-      return conv
-    }
-
     try {
       const conv = await api.createConversation(title || 'שיחה חדשה')
       set((state) => ({
@@ -89,9 +72,6 @@ export const useChatStore = create((set, get) => ({
 
   selectConversation: async (conv) => {
     set({ currentConversation: conv })
-    if (useAuthStore.getState().isGuest) {
-      return
-    }
     try {
       const messages = await api.getMessages(conv.id)
       set({ messages })
@@ -102,7 +82,7 @@ export const useChatStore = create((set, get) => ({
   },
 
   sendMessage: async (content) => {
-    const { currentConversation, messages: currentMessages } = get()
+    const { currentConversation } = get()
     if (!currentConversation || !content.trim()) return
 
     set({ sending: true, streamingContent: '' })
@@ -111,12 +91,8 @@ export const useChatStore = create((set, get) => ({
     const tempMsg = { id: tempId, role: 'user', content, timestamp: new Date().toISOString() }
     set((state) => ({ messages: [...state.messages, tempMsg] }))
 
-    const isGuest = useAuthStore.getState().isGuest
-
     try {
-      const body = isGuest
-        ? await api.sendGuestMessageStream(content, currentMessages)
-        : await api.sendMessageStream(currentConversation.id, content)
+      const body = await api.sendMessageStream(currentConversation.id, content)
 
       const finalAssistantMessage = await parseSSEStream(body, {
         onUserMessage: (msg) => {

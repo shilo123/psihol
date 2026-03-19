@@ -97,6 +97,38 @@ router.post('/register', async (req, res) => {
   }
 });
 
+// POST /guest - Create a temporary guest user (auto-deletes after 3 days)
+router.post('/guest', async (req, res) => {
+  try {
+    const GUEST_NAMES = ['נועה', 'יוסי', 'מיכל', 'אורי', 'דנה', 'עומר', 'שירה', 'איתי', 'רונית', 'גיל', 'תמר', 'אלון', 'ליאת', 'עידו', 'הדס'];
+    const name = GUEST_NAMES[Math.floor(Math.random() * GUEST_NAMES.length)];
+    const id = uuidv4();
+    const expiresAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000); // 3 days
+
+    const user = {
+      id,
+      email: `guest-${id.slice(0, 8)}@guest.psihologit.app`,
+      name,
+      picture: '',
+      parentName: '',
+      parentAge: '',
+      parentStyle: '',
+      children: [],
+      challenges: [],
+      isGuest: true,
+      expiresAt,
+      createdAt: new Date().toISOString()
+    };
+
+    await createUser(user);
+    const token = 'mock-token-' + user.id;
+    res.json({ token, user });
+  } catch (error) {
+    console.error('Guest login error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // GET /me - Get current user from token
 router.get('/me', async (req, res) => {
   try {

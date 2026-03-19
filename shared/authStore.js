@@ -5,36 +5,39 @@ import { toast } from './toastStore.js'
 export const useAuthStore = create((set, get) => ({
   user: null,
   token: typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null,
-  isGuest: typeof localStorage !== 'undefined' ? localStorage.getItem('isGuest') === 'true' : false,
+  isGuest: false,
   loading: false,
 
-  get isLoggedIn() { return !!get().token || get().isGuest },
+  get isLoggedIn() { return !!get().token },
   get isOnboarded() {
-    if (get().isGuest) return true
     const user = get().user
     if (!user) return false
     return !!(user.parentName && user.children?.length > 0 && user.challenges?.length > 0)
   },
 
   init: async () => {
-    if (get().isGuest) return
     const token = get().token
     if (!token) return
     try {
       const user = await api.getMe()
-      set({ user })
+      set({ user, isGuest: !!user.isGuest })
     } catch {
       get().logout()
     }
   },
 
-  loginAsGuest: () => {
-    if (typeof localStorage !== 'undefined') localStorage.setItem('isGuest', 'true')
-    set({
-      isGuest: true,
-      user: { parentName: 'אורח', email: '', children: [], challenges: [] },
-      token: null,
-    })
+  loginAsGuest: async () => {
+    set({ loading: true })
+    try {
+      const data = await api.loginAsGuest()
+      if (typeof localStorage !== 'undefined') localStorage.setItem('token', data.token)
+      set({ token: data.token, user: data.user, isGuest: true, loading: false })
+      return data.user
+    } catch {
+      set({ loading: false })
+      toast.error('שגיאה ביצירת חשבון אורח. נסו שוב.')
+      return null
+    }
   },
 
   login: async ({ name, email }) => {
@@ -46,7 +49,7 @@ export const useAuthStore = create((set, get) => ({
         picture: ''
       })
       if (typeof localStorage !== 'undefined') localStorage.setItem('token', data.token)
-      set({ token: data.token, user: data.user, loading: false })
+      set({ token: data.token, user: data.user, isGuest: false, loading: false })
       return data.user
     } catch {
       set({ loading: false })
@@ -71,7 +74,6 @@ export const useAuthStore = create((set, get) => ({
   logout: () => {
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem('token')
-      localStorage.removeItem('isGuest')
     }
     set({ user: null, token: null, isGuest: false })
   },

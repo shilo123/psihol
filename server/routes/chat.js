@@ -148,7 +148,8 @@ router.post('/conversations', async (req, res) => {
       userId: user.id,
       title: title || 'שיחה חדשה',
       createdAt: new Date().toISOString(),
-      messages: []
+      messages: [],
+      ...(user.isGuest ? { expiresAt: user.expiresAt } : {}),
     };
 
     await createConversation(conversation);

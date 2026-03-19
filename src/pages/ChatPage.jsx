@@ -91,9 +91,9 @@ export default function ChatPage() {
     }
   }, [isLoggedIn, conversations, currentConversation, selectConversation])
 
-  // Navigate to onboarding after login if not onboarded (skip for guests)
+  // Navigate to onboarding after login if not onboarded
   useEffect(() => {
-    if (isLoggedIn && !isGuest && user && !isOnboarded) {
+    if (isLoggedIn && user && !isOnboarded) {
       navigate('/onboarding')
     }
   }, [isLoggedIn, isGuest, user, isOnboarded, navigate])
@@ -263,11 +263,15 @@ export default function ChatPage() {
 
             {/* Guest button */}
             <button
-              onClick={loginAsGuest}
-              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gray-100 hover:bg-gray-200 rounded-2xl transition-all duration-200 text-text-secondary font-medium mt-2"
+              onClick={async () => {
+                const u = await loginAsGuest()
+                if (u) navigate('/onboarding')
+              }}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gray-100 hover:bg-gray-200 rounded-2xl transition-all duration-200 text-text-secondary font-medium mt-2 disabled:opacity-50"
             >
               <span className="material-symbols-outlined text-lg">person_outline</span>
-              <span>כניסה כאורח</span>
+              <span>כניסה כאורח (3 ימים)</span>
             </button>
 
             {/* Terms */}

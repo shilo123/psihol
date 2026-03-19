@@ -30,6 +30,7 @@ export const api = {
   login: (data) => apiRequest('/api/auth/login', { method: 'POST', body: JSON.stringify(data) }),
   register: (data) => apiRequest('/api/auth/register', { method: 'POST', body: JSON.stringify(data) }),
   getMe: () => apiRequest('/api/auth/me'),
+  loginAsGuest: () => apiRequest('/api/auth/guest', { method: 'POST' }),
 
   // Chat
   getConversations: () => apiRequest('/api/chat/conversations'),

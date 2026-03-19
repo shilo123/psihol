@@ -19,8 +19,10 @@ export async function getDb() {
 
   // Create indexes
   await db.collection('users').createIndex({ email: 1 }, { unique: true });
+  await db.collection('users').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
   await db.collection('conversations').createIndex({ userId: 1 });
   await db.collection('conversations').createIndex({ userId: 1, createdAt: -1 });
+  await db.collection('conversations').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
   console.log('Connected to MongoDB:', DB_NAME);
   return db;
