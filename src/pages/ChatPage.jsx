@@ -707,45 +707,35 @@ export default function ChatPage() {
         .child-select-btn:active {
           transform: scale(0.93);
         }
-        .child-select-btn::before {
-          font-family: "Material Symbols Outlined";
-          font-size: 20px;
+        .child-btn-icon {
+          font-size: 20px !important;
+          pointer-events: none;
         }
-        /* sensitive - רגיש/ה - ורוד רך */
         .child-sensitive {
           background: linear-gradient(135deg, #ec4899 0%, #f472b6 50%, #db2777 100%);
           box-shadow: 0 4px 15px rgba(236, 72, 153, 0.35);
         }
         .child-sensitive:hover { box-shadow: 0 8px 25px rgba(236, 72, 153, 0.45); }
-        .child-sensitive::before { content: "\\e87f"; }
-        /* stubborn - עקשן/ית - כתום חזק */
         .child-stubborn {
           background: linear-gradient(135deg, #f59e0b 0%, #f97316 50%, #ea580c 100%);
           box-shadow: 0 4px 15px rgba(245, 158, 11, 0.35);
         }
         .child-stubborn:hover { box-shadow: 0 8px 25px rgba(245, 158, 11, 0.45); }
-        .child-stubborn::before { content: "\\ea3b"; }
-        /* anxious - חרדתי/ת - כחול עמוק */
         .child-anxious {
           background: linear-gradient(135deg, #6366f1 0%, #818cf8 50%, #4f46e5 100%);
           box-shadow: 0 4px 15px rgba(99, 102, 241, 0.35);
         }
         .child-anxious:hover { box-shadow: 0 8px 25px rgba(99, 102, 241, 0.45); }
-        .child-anxious::before { content: "\\f0e2"; }
-        /* energetic - אנרגטי/ת - ירוק חי */
         .child-energetic {
           background: linear-gradient(135deg, #10b981 0%, #34d399 50%, #059669 100%);
           box-shadow: 0 4px 15px rgba(16, 185, 129, 0.35);
         }
         .child-energetic:hover { box-shadow: 0 8px 25px rgba(16, 185, 129, 0.45); }
-        .child-energetic::before { content: "\\e566"; }
-        /* calm - רגוע/ה - טורקיז */
         .child-calm {
           background: linear-gradient(135deg, #06b6d4 0%, #22d3ee 50%, #0891b2 100%);
           box-shadow: 0 4px 15px rgba(6, 182, 212, 0.35);
         }
         .child-calm:hover { box-shadow: 0 8px 25px rgba(6, 182, 212, 0.45); }
-        .child-calm::before { content: "\\e1bd"; }
       `}</style>
     </div>
   )

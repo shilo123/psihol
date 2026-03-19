@@ -55,7 +55,9 @@ export function renderMarkdown(text) {
     // Child selector buttons: [[child:name:personality]]
     .replace(/\[\[child:([^:\]]+):?([^\]]*)\]\]/g, (_, name, personality) => {
       const p = (personality || 'calm').trim()
-      return `<button class="child-select-btn child-${p}" data-child="${name}">${name}</button>`
+      const icons = { sensitive: 'favorite', stubborn: 'flash_on', anxious: 'sentiment_neutral', energetic: 'bolt', calm: 'spa' }
+      const icon = icons[p] || 'child_care'
+      return `<button class="child-select-btn child-${p}" data-child="${name}"><span class="material-symbols-outlined child-btn-icon">${icon}</span>${name}</button>`
     })
     .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-text-main">$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
