@@ -9,61 +9,47 @@ import {
   pushMessage,
   updateConversationAfterChat,
   deleteConversation,
-  findUserById,
+  updateConversation,
 } from '../db.js';
 
 const router = Router();
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || null;
+const MAX_MESSAGES_BEFORE_SUMMARY = 20;
+
+// ============================================================
+// Helpers
+// ============================================================
 
 function buildSystemMessage(systemPrompt, user) {
   let contextParts = [systemPrompt];
 
-  if (user.parentName) {
-    contextParts.push(`\nשם ההורה: ${user.parentName}`);
-  }
-  if (user.parentAge) {
-    contextParts.push(`גיל ההורה: ${user.parentAge}`);
-  }
-  if (user.parentStyle) {
-    contextParts.push(`סגנון הורות: ${user.parentStyle}`);
-  }
+  if (user.parentName) contextParts.push(`\nשם ההורה: ${user.parentName}`);
+  if (user.parentAge) contextParts.push(`גיל ההורה: ${user.parentAge}`);
+  if (user.parentStyle) contextParts.push(`סגנון הורות: ${user.parentStyle}`);
 
   if (user.children && user.children.length > 0) {
     contextParts.push('\nילדים:');
     user.children.forEach((child, i) => {
       const parts = [`${i + 1}. ${child.name}`];
-      if (child.birthDate) {
-        const age = calculateAge(child.birthDate);
-        parts.push(`(גיל: ${age})`);
-      }
-      if (child.gender) {
-        parts.push(child.gender === 'boy' ? '- בן' : '- בת');
-      }
-      if (child.personality) {
-        parts.push(`- אופי: ${child.personality}`);
-      }
+      if (child.birthDate) parts.push(`(גיל: ${calculateAge(child.birthDate)})`);
+      if (child.gender) parts.push(child.gender === 'boy' ? '- בן' : '- בת');
+      if (child.personality) parts.push(`- אופי: ${child.personality}`);
       contextParts.push(parts.join(' '));
     });
   }
 
   if (user.challenges && user.challenges.length > 0) {
     const challengeLabels = {
-      tantrums: 'התפרצויות זעם',
-      defiance: 'סירוב לשמוע',
-      sleep: 'קושי בשינה',
-      siblings: 'ריבים בין אחים',
-      separation: 'חרדת נטישה',
-      eating: 'בעיות אכילה',
-      screens: 'התמכרות למסכים',
-      social: 'קשיים חברתיים',
+      tantrums: 'התפרצויות זעם', defiance: 'סירוב לשמוע', sleep: 'קושי בשינה',
+      siblings: 'ריבים בין אחים', separation: 'חרדת נטישה', eating: 'בעיות אכילה',
+      screens: 'התמכרות למסכים', social: 'קשיים חברתיים',
     };
     const labels = user.challenges.map(c => challengeLabels[c] || c);
     contextParts.push(`\nאתגרים מרכזיים: ${labels.join(', ')}`);
   }
 
   contextParts.push('\nהתאימי את התשובות שלך לפרופיל הספציפי של הילד/ים. השתמשי בשמות שלהם. התייחסי לגיל ולאתגרים.');
-
   return contextParts.join('\n');
 }
 
@@ -80,23 +66,21 @@ function calculateAge(birthDate) {
 
 function generateMockResponse() {
   const responses = [
-    `אני שומעת אותך, וקודם כל רוצה להגיד לך שזה לגמרי טבעי להרגיש ככה. עצם זה שאת/ה מחפש/ת עזרה מראה כמה אכפת לך 💛
-
-הנה כמה טיפים מעשיים שיכולים לעזור:
+    `אני שומעת אותך, וקודם כל רוצה להגיד לך שזה לגמרי טבעי להרגיש ככה 💛
 
 1. **נשימה עמוקה** - לפני שמגיבים, קחו נשימה עמוקה אחת 🧘
 2. **הכרה ברגש** - במקום "אל תבכה", נסו "אני רואה שאתה עצוב" 🫂
 3. **הצעת בחירות** - תנו לילד שתי אפשרויות מקובלות עליכם 🎯
 
-רוצה שנעמיק באחד מהנושאים האלה? 😊`,
+רוצה שנעמיק? 😊`,
 
-    `את/ה לא לבד בזה, והרבה הורים מתמודדים עם אתגרים דומים 🌟
+    `את/ה לא לבד בזה 🌟
 
-1. **ההתנהגות היא תקשורת** - ילדים מתנהגים "רע" כי הם מנסים לתקשר משהו 🤔
-2. **חיבור לפני תיקון** - קודם מתחברים לרגש, אחר כך מטפלים בהתנהגות 💕
+1. **ההתנהגות היא תקשורת** - ילדים מנסים לתקשר משהו 🤔
+2. **חיבור לפני תיקון** - קודם מתחברים לרגש, אחר כך מטפלים 💕
 3. **גבולות עם אהבה** - גבול ברור + אמפתיה = ילד שמרגיש בטוח 🛡️
 
-אשמח לשמוע איך הולך! 😊`,
+אשמח לשמוע עוד! 😊`,
   ];
   return responses[Math.floor(Math.random() * responses.length)];
 }
@@ -110,6 +94,141 @@ async function streamMockResponse(res, text) {
     i += chunkSize;
     await new Promise(r => setTimeout(r, 15 + Math.random() * 25));
   }
+}
+
+// Summarize old messages when history is too long
+async function summarizeHistory(messages) {
+  if (!OPENAI_API_KEY || messages.length <= MAX_MESSAGES_BEFORE_SUMMARY) {
+    return null;
+  }
+
+  // Keep last 10 messages as-is, summarize the rest
+  const toSummarize = messages.slice(0, -10);
+  const summaryMessages = [
+    {
+      role: 'system',
+      content: 'סכמי את השיחה הבאה בין הורה למדריכת הורים. כתבי סיכום תמציתי בעברית שכולל: הנושאים שנידונו, העצות שניתנו, והבעיות המרכזיות. כתבי בגוף שלישי. מקסימום 300 מילים.'
+    },
+    ...toSummarize.map(m => ({ role: m.role, content: m.content }))
+  ];
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4.1-mini',
+        messages: summaryMessages,
+        temperature: 0.3,
+        max_tokens: 500,
+      }),
+    });
+
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.choices[0].message.content;
+  } catch (error) {
+    console.error('Summary generation failed:', error);
+    return null;
+  }
+}
+
+// Build the messages array for OpenAI, with optional summarization
+async function buildOpenAIMessages(systemMessage, allMessages) {
+  if (allMessages.length <= MAX_MESSAGES_BEFORE_SUMMARY) {
+    return [
+      { role: 'system', content: systemMessage },
+      ...allMessages.map(m => ({ role: m.role, content: m.content }))
+    ];
+  }
+
+  // Try to summarize old messages
+  const summary = await summarizeHistory(allMessages);
+  const recentMessages = allMessages.slice(-10);
+
+  if (summary) {
+    return [
+      { role: 'system', content: systemMessage + `\n\nסיכום השיחה עד כה:\n${summary}` },
+      ...recentMessages.map(m => ({ role: m.role, content: m.content }))
+    ];
+  }
+
+  // Fallback: just use last 20 messages
+  const fallback = allMessages.slice(-MAX_MESSAGES_BEFORE_SUMMARY);
+  return [
+    { role: 'system', content: systemMessage },
+    ...fallback.map(m => ({ role: m.role, content: m.content }))
+  ];
+}
+
+// Stream OpenAI response
+async function streamOpenAI(res, messages) {
+  let fullContent = '';
+
+  if (OPENAI_API_KEY) {
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4.1',
+          messages,
+          temperature: 0.7,
+          max_tokens: 1500,
+          stream: true,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error('OpenAI API error:', response.status);
+        fullContent = generateMockResponse();
+        await streamMockResponse(res, fullContent);
+      } else {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop();
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || !trimmed.startsWith('data: ')) continue;
+            const payload = trimmed.slice(6);
+            if (payload === '[DONE]') continue;
+            try {
+              const parsed = JSON.parse(payload);
+              const delta = parsed.choices?.[0]?.delta?.content;
+              if (delta) {
+                fullContent += delta;
+                res.write(`data: ${JSON.stringify({ type: 'chunk', content: delta })}\n\n`);
+              }
+            } catch {}
+          }
+        }
+      }
+    } catch (error) {
+      console.error('OpenAI stream failed:', error);
+      fullContent = generateMockResponse();
+      await streamMockResponse(res, fullContent);
+    }
+  } else {
+    console.log('[MOCK MODE] No OPENAI_API_KEY set.');
+    fullContent = generateMockResponse();
+    await streamMockResponse(res, fullContent);
+  }
+
+  return fullContent;
 }
 
 // ============================================================
@@ -188,7 +307,6 @@ router.post('/conversations/:id/messages', async (req, res) => {
     const conversation = await getConversationById(req.params.id, user.id);
     if (!conversation) return res.status(404).json({ error: 'Conversation not found' });
 
-    // Create user message
     const userMessage = {
       id: uuidv4(),
       role: 'user',
@@ -196,17 +314,14 @@ router.post('/conversations/:id/messages', async (req, res) => {
       timestamp: new Date().toISOString()
     };
 
-    // Save user message to DB immediately
     await pushMessage(conversation.id, user.id, userMessage);
 
-    // Build system message with user profile context
     const systemPrompt = await getSystemPrompt();
     const systemMessage = buildSystemMessage(systemPrompt, user);
-
     const assistantId = uuidv4();
     const assistantTimestamp = new Date().toISOString();
 
-    // SSE streaming setup
+    // SSE setup
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
@@ -216,78 +331,13 @@ router.post('/conversations/:id/messages', async (req, res) => {
 
     res.write(`data: ${JSON.stringify({ type: 'user_message', message: userMessage })}\n\n`);
 
-    // Build messages for OpenAI
+    // Build messages with auto-summarization for long histories
     const allMessages = [...conversation.messages, userMessage];
-    const messages = [
-      { role: 'system', content: systemMessage },
-      ...allMessages.map(m => ({ role: m.role, content: m.content }))
-    ];
+    const messages = await buildOpenAIMessages(systemMessage, allMessages);
 
-    let fullContent = '';
+    const fullContent = await streamOpenAI(res, messages);
 
-    if (OPENAI_API_KEY) {
-      try {
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${OPENAI_API_KEY}`,
-          },
-          body: JSON.stringify({
-            model: 'gpt-4.1',
-            messages,
-            temperature: 0.7,
-            max_tokens: 1500,
-            stream: true,
-          }),
-        });
-
-        if (!response.ok) {
-          console.error('OpenAI API error:', response.status);
-          fullContent = generateMockResponse();
-          await streamMockResponse(res, fullContent);
-        } else {
-          const reader = response.body.getReader();
-          const decoder = new TextDecoder();
-          let buffer = '';
-
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop();
-
-            for (const line of lines) {
-              const trimmed = line.trim();
-              if (!trimmed || !trimmed.startsWith('data: ')) continue;
-              const payload = trimmed.slice(6);
-              if (payload === '[DONE]') continue;
-
-              try {
-                const parsed = JSON.parse(payload);
-                const delta = parsed.choices?.[0]?.delta?.content;
-                if (delta) {
-                  fullContent += delta;
-                  res.write(`data: ${JSON.stringify({ type: 'chunk', content: delta })}\n\n`);
-                }
-              } catch {}
-            }
-          }
-        }
-      } catch (error) {
-        console.error('OpenAI stream failed:', error);
-        fullContent = generateMockResponse();
-        await streamMockResponse(res, fullContent);
-      }
-    } else {
-      console.log('[MOCK MODE] No OPENAI_API_KEY set.');
-      fullContent = generateMockResponse();
-      await streamMockResponse(res, fullContent);
-    }
-
-    // Save assistant message to DB
+    // Save assistant message
     const assistantMessage = {
       id: assistantId,
       role: 'assistant',
@@ -314,13 +364,16 @@ router.post('/conversations/:id/messages', async (req, res) => {
   }
 });
 
-// POST /guest - Guest chat (no auth, no saving, streaming SSE)
-router.post('/guest', async (req, res) => {
+// POST /temp - Temporary chat (authenticated but NOT saved to DB)
+router.post('/temp', async (req, res) => {
   try {
+    const user = await getUserFromToken(req);
     const { content, history } = req.body;
     if (!content) return res.status(400).json({ error: 'Message content is required' });
 
     const systemPrompt = await getSystemPrompt();
+    const systemMessage = user ? buildSystemMessage(systemPrompt, user) : systemPrompt;
+
     const userMessage = {
       id: uuidv4(),
       role: 'user',
@@ -337,73 +390,15 @@ router.post('/guest', async (req, res) => {
 
     res.write(`data: ${JSON.stringify({ type: 'user_message', message: userMessage })}\n\n`);
 
+    // Build messages from client-side history (with summarization)
     const prevMessages = (history || []).map(m => ({ role: m.role, content: m.content }));
-    const messages = [
-      { role: 'system', content: systemPrompt },
-      ...prevMessages,
-      { role: 'user', content }
-    ];
+    const allMessages = [...prevMessages, { role: 'user', content }];
+    const messages = await buildOpenAIMessages(systemMessage, allMessages);
 
-    let fullContent = '';
-    const assistantId = uuidv4();
-
-    if (OPENAI_API_KEY) {
-      try {
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${OPENAI_API_KEY}`,
-          },
-          body: JSON.stringify({
-            model: 'gpt-4.1',
-            messages,
-            temperature: 0.7,
-            max_tokens: 1500,
-            stream: true,
-          }),
-        });
-
-        if (!response.ok) {
-          fullContent = generateMockResponse();
-          await streamMockResponse(res, fullContent);
-        } else {
-          const reader = response.body.getReader();
-          const decoder = new TextDecoder();
-          let buffer = '';
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop();
-            for (const line of lines) {
-              const trimmed = line.trim();
-              if (!trimmed || !trimmed.startsWith('data: ')) continue;
-              const payload = trimmed.slice(6);
-              if (payload === '[DONE]') continue;
-              try {
-                const parsed = JSON.parse(payload);
-                const delta = parsed.choices?.[0]?.delta?.content;
-                if (delta) {
-                  fullContent += delta;
-                  res.write(`data: ${JSON.stringify({ type: 'chunk', content: delta })}\n\n`);
-                }
-              } catch {}
-            }
-          }
-        }
-      } catch {
-        fullContent = generateMockResponse();
-        await streamMockResponse(res, fullContent);
-      }
-    } else {
-      fullContent = generateMockResponse();
-      await streamMockResponse(res, fullContent);
-    }
+    const fullContent = await streamOpenAI(res, messages);
 
     const assistantMessage = {
-      id: assistantId,
+      id: uuidv4(),
       role: 'assistant',
       content: fullContent,
       timestamp: new Date().toISOString(),
@@ -412,7 +407,7 @@ router.post('/guest', async (req, res) => {
     res.write(`data: ${JSON.stringify({ type: 'done', message: assistantMessage })}\n\n`);
     res.end();
   } catch (error) {
-    console.error('Guest chat error:', error);
+    console.error('Temp chat error:', error);
     if (!res.headersSent) {
       res.status(500).json({ error: 'Internal server error' });
     } else {

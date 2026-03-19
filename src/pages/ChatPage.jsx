@@ -62,6 +62,8 @@ export default function ChatPage() {
   const createConversation = useChatStore((s) => s.createConversation)
   const selectConversation = useChatStore((s) => s.selectConversation)
   const sendMessage = useChatStore((s) => s.sendMessage)
+  const startTempChat = useChatStore((s) => s.startTempChat)
+  const isTempChat = useChatStore((s) => s.isTempChat)
 
   /* ---- Local state ---- */
   const [inputText, setInputText] = useState('')
@@ -145,7 +147,7 @@ export default function ChatPage() {
     if (!text || sending) return
     setInputText('')
 
-    if (!currentConversation) {
+    if (!isTempChat && !currentConversation) {
       const conv = await createConversation(text.substring(0, 50))
       if (!conv) return
     }
@@ -325,6 +327,13 @@ export default function ChatPage() {
               </div>
               <span className="text-sm font-bold text-text-main dark:text-gray-200">פסיכולוגית בכיס</span>
             </div>
+            {/* Temp chat indicator */}
+            {isTempChat && (
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-bold mr-auto">
+                <span className="material-symbols-outlined text-sm">timer</span>
+                שיחה זמנית
+              </div>
+            )}
           </div>
 
           {/* Messages container */}
@@ -540,14 +549,23 @@ export default function ChatPage() {
               </button>
             </div>
 
-            {/* New conversation button */}
-            <button
-              onClick={handleNewConversation}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-xl font-semibold shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:brightness-110 transition-all duration-200"
-            >
-              <span className="material-symbols-outlined text-xl">add_comment</span>
-              שיחה חדשה
-            </button>
+            {/* New conversation buttons */}
+            <div className="flex gap-2">
+              <button
+                onClick={handleNewConversation}
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-3 bg-primary text-white rounded-xl font-semibold shadow-lg shadow-primary/25 hover:shadow-xl hover:brightness-110 transition-all duration-200"
+              >
+                <span className="material-symbols-outlined text-xl">add_comment</span>
+                שיחה חדשה
+              </button>
+              <button
+                onClick={() => { startTempChat(); setSidebarOpen(false) }}
+                className="shrink-0 flex items-center justify-center gap-1.5 px-3 py-3 bg-amber-500 text-white rounded-xl font-semibold shadow-lg shadow-amber-500/25 hover:shadow-xl hover:brightness-110 transition-all duration-200"
+                title="שיחה זמנית - לא נשמרת"
+              >
+                <span className="material-symbols-outlined text-xl">timer</span>
+              </button>
+            </div>
           </div>
 
           {/* Conversations list */}

@@ -43,6 +43,7 @@ export const useChatStore = create((set, get) => ({
   loading: false,
   sending: false,
   streamingContent: '',
+  isTempChat: false,
 
   loadConversations: async () => {
     set({ loading: true })
@@ -62,6 +63,7 @@ export const useChatStore = create((set, get) => ({
         conversations: [conv, ...state.conversations],
         currentConversation: conv,
         messages: [],
+        isTempChat: false,
       }))
       return conv
     } catch {
@@ -70,8 +72,16 @@ export const useChatStore = create((set, get) => ({
     }
   },
 
+  startTempChat: () => {
+    set({
+      currentConversation: { id: 'temp', title: 'שיחה זמנית' },
+      messages: [],
+      isTempChat: true,
+    })
+  },
+
   selectConversation: async (conv) => {
-    set({ currentConversation: conv })
+    set({ currentConversation: conv, isTempChat: false })
     try {
       const messages = await api.getMessages(conv.id)
       set({ messages })
@@ -82,7 +92,7 @@ export const useChatStore = create((set, get) => ({
   },
 
   sendMessage: async (content) => {
-    const { currentConversation } = get()
+    const { currentConversation, messages: currentMessages, isTempChat } = get()
     if (!currentConversation || !content.trim()) return
 
     set({ sending: true, streamingContent: '' })
@@ -92,7 +102,9 @@ export const useChatStore = create((set, get) => ({
     set((state) => ({ messages: [...state.messages, tempMsg] }))
 
     try {
-      const body = await api.sendMessageStream(currentConversation.id, content)
+      const body = isTempChat
+        ? await api.sendTempMessageStream(content, currentMessages)
+        : await api.sendMessageStream(currentConversation.id, content)
 
       const finalAssistantMessage = await parseSSEStream(body, {
         onUserMessage: (msg) => {
@@ -113,7 +125,7 @@ export const useChatStore = create((set, get) => ({
 
       if (finalAssistantMessage) {
         set((state) => {
-          const convs = state.conversations.map(c => {
+          const convs = isTempChat ? state.conversations : state.conversations.map(c => {
             if (c.id === currentConversation.id) {
               return { ...c, title: c.messageCount === 0 ? content.substring(0, 50) : c.title, messageCount: (c.messageCount || 0) + 2 }
             }

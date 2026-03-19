@@ -70,6 +70,24 @@ export const api = {
     return res.body
   },
 
+  // Temp chat - not saved to DB
+  sendTempMessageStream: async (content, history) => {
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null
+    const res = await fetch(`${BASE_URL}/api/chat/temp`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ content, history }),
+    })
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ error: 'Request failed' }))
+      throw new Error(error.error || 'Request failed')
+    }
+    return res.body
+  },
+
   // User
   getProfile: () => apiRequest('/api/user/profile'),
   updateProfile: (data) => apiRequest('/api/user/profile', { method: 'PUT', body: JSON.stringify(data) }),
