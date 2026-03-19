@@ -689,32 +689,63 @@ export default function ChatPage() {
         .child-select-btn {
           display: inline-flex;
           align-items: center;
-          gap: 6px;
-          padding: 8px 20px;
+          gap: 8px;
+          padding: 10px 22px;
           margin: 4px 4px;
-          background: linear-gradient(135deg, var(--color-primary, #6366f1) 0%, #7c3aed 100%);
           color: white;
           border: none;
           border-radius: 9999px;
-          font-weight: 700;
+          font-weight: 800;
           font-size: 14px;
           cursor: pointer;
-          transition: all 0.2s;
-          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .child-select-btn:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+          transform: translateY(-3px) scale(1.03);
           filter: brightness(1.1);
         }
         .child-select-btn:active {
-          transform: scale(0.95);
+          transform: scale(0.93);
         }
         .child-select-btn::before {
-          content: "\\e7fd";
           font-family: "Material Symbols Outlined";
-          font-size: 18px;
+          font-size: 20px;
         }
+        /* sensitive - רגיש/ה - ורוד רך */
+        .child-sensitive {
+          background: linear-gradient(135deg, #ec4899 0%, #f472b6 50%, #db2777 100%);
+          box-shadow: 0 4px 15px rgba(236, 72, 153, 0.35);
+        }
+        .child-sensitive:hover { box-shadow: 0 8px 25px rgba(236, 72, 153, 0.45); }
+        .child-sensitive::before { content: "\\e87f"; }
+        /* stubborn - עקשן/ית - כתום חזק */
+        .child-stubborn {
+          background: linear-gradient(135deg, #f59e0b 0%, #f97316 50%, #ea580c 100%);
+          box-shadow: 0 4px 15px rgba(245, 158, 11, 0.35);
+        }
+        .child-stubborn:hover { box-shadow: 0 8px 25px rgba(245, 158, 11, 0.45); }
+        .child-stubborn::before { content: "\\ea3b"; }
+        /* anxious - חרדתי/ת - כחול עמוק */
+        .child-anxious {
+          background: linear-gradient(135deg, #6366f1 0%, #818cf8 50%, #4f46e5 100%);
+          box-shadow: 0 4px 15px rgba(99, 102, 241, 0.35);
+        }
+        .child-anxious:hover { box-shadow: 0 8px 25px rgba(99, 102, 241, 0.45); }
+        .child-anxious::before { content: "\\f0e2"; }
+        /* energetic - אנרגטי/ת - ירוק חי */
+        .child-energetic {
+          background: linear-gradient(135deg, #10b981 0%, #34d399 50%, #059669 100%);
+          box-shadow: 0 4px 15px rgba(16, 185, 129, 0.35);
+        }
+        .child-energetic:hover { box-shadow: 0 8px 25px rgba(16, 185, 129, 0.45); }
+        .child-energetic::before { content: "\\e566"; }
+        /* calm - רגוע/ה - טורקיז */
+        .child-calm {
+          background: linear-gradient(135deg, #06b6d4 0%, #22d3ee 50%, #0891b2 100%);
+          box-shadow: 0 4px 15px rgba(6, 182, 212, 0.35);
+        }
+        .child-calm:hover { box-shadow: 0 8px 25px rgba(6, 182, 212, 0.45); }
+        .child-calm::before { content: "\\e1bd"; }
       `}</style>
     </div>
   )

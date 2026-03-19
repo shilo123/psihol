@@ -52,8 +52,11 @@ export function renderMarkdown(text) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    // Child selector buttons
-    .replace(/\[\[child:(.*?)\]\]/g, '<button class="child-select-btn" data-child="$1">$1</button>')
+    // Child selector buttons: [[child:name:personality]]
+    .replace(/\[\[child:([^:\]]+):?([^\]]*)\]\]/g, (_, name, personality) => {
+      const p = (personality || 'calm').trim()
+      return `<button class="child-select-btn child-${p}" data-child="${name}">${name}</button>`
+    })
     .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-text-main">$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
     .replace(/^[-•]\s+(.+)$/gm, '<li class="flex items-start gap-2"><span class="text-primary mt-1.5 text-xs">●</span><span>$1</span></li>')
