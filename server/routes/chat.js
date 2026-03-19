@@ -50,6 +50,15 @@ function buildSystemMessage(systemPrompt, user) {
   }
 
   contextParts.push('\nהתאימי את התשובות שלך לפרופיל הספציפי של הילד/ים. השתמשי בשמות שלהם. התייחסי לגיל ולאתגרים.');
+
+  // Multi-child selection instructions
+  if (user.children && user.children.length > 1) {
+    const childNames = user.children.map(c => `[[child:${c.name}]]`).join(' ');
+    contextParts.push(`\nחשוב מאוד: כשיש יותר מילד אחד ולא ברור על איזה ילד ההורה מדבר/ת, או בתחילת שיחה חדשה, שאלי על איזה ילד מדובר והציגי את הכפתורים הבאים בשורה נפרדת:`);
+    contextParts.push(childNames);
+    contextParts.push('פורמט הכפתורים חייב להיות בדיוק [[child:שם]] - המערכת תציג אותם ככפתורים לחיצים. אל תשתמשי בפורמט הזה בהקשר אחר.');
+  }
+
   return contextParts.join('\n');
 }
 

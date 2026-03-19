@@ -141,6 +141,15 @@ export default function ChatPage() {
     if (u) navigate('/onboarding')
   }
 
+  async function handleChildSelect(childName) {
+    const text = `אני מדבר/ת על ${childName}`
+    if (!currentConversation && !isTempChat) {
+      const conv = await createConversation(text.substring(0, 50))
+      if (!conv) return
+    }
+    await sendMessage(text)
+  }
+
   async function handleSend(e) {
     e?.preventDefault()
     const text = inputText.trim()
@@ -393,6 +402,14 @@ export default function ChatPage() {
                               <div
                                 className="text-sm text-text-main dark:text-gray-200 leading-relaxed prose-sm"
                                 dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }}
+                                onClick={(e) => {
+                                  if (e.target.classList.contains('child-select-btn')) {
+                                    const childName = e.target.dataset.child
+                                    if (childName && !sending) {
+                                      handleChildSelect(childName)
+                                    }
+                                  }
+                                }}
                               />
                             </div>
                             {/* Actions */}
@@ -668,6 +685,35 @@ export default function ChatPage() {
         }
         .scrollbar-thin::-webkit-scrollbar-track {
           background: transparent;
+        }
+        .child-select-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 8px 20px;
+          margin: 4px 4px;
+          background: linear-gradient(135deg, var(--color-primary, #6366f1) 0%, #7c3aed 100%);
+          color: white;
+          border: none;
+          border-radius: 9999px;
+          font-weight: 700;
+          font-size: 14px;
+          cursor: pointer;
+          transition: all 0.2s;
+          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        .child-select-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+          filter: brightness(1.1);
+        }
+        .child-select-btn:active {
+          transform: scale(0.95);
+        }
+        .child-select-btn::before {
+          content: "\\e7fd";
+          font-family: "Material Symbols Outlined";
+          font-size: 18px;
         }
       `}</style>
     </div>
