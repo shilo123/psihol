@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '../../shared/authStore'
 import { calculateAge } from '../../shared/constants'
 import { api } from '../../shared/api'
+import BirthDatePicker from '../components/BirthDatePicker'
 
 const PERSONALITIES = [
   { value: 'sensitive', label: 'רגיש/ה' },
@@ -298,11 +299,9 @@ export default function SettingsPage() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-text-main mb-1.5">תאריך לידה</label>
-                      <input
-                        type="date"
+                      <BirthDatePicker
                         value={childForm.birthDate}
-                        onChange={e => setChildForm(f => ({ ...f, birthDate: e.target.value }))}
-                        className="w-full px-4 py-2.5 rounded-xl border border-border-color bg-white text-sm text-text-main focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                        onChange={(date) => setChildForm(f => ({ ...f, birthDate: date }))}
                       />
                     </div>
                   </div>

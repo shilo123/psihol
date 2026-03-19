@@ -1,4 +1,6 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import express from 'express';
 import cors from 'cors';
 import authRoutes from './routes/auth.js';
@@ -6,12 +8,17 @@ import chatRoutes from './routes/chat.js';
 import userRoutes from './routes/user.js';
 import adminRoutes from './routes/admin.js';
 
+// Load .env from project root (not server/)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+dotenv.config({ path: join(__dirname, '..', '.env') });
+
 const app = express();
 const PORT = 3001;
 
 // Middleware
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: ['http://localhost:8080', 'http://localhost:5173'],
   credentials: true
 }));
 app.use(express.json());

@@ -1,6 +1,5 @@
 import { MongoClient } from 'mongodb';
 
-const MONGODB_URI = process.env.MONGODB_URI;
 const DB_NAME = 'Psihologit';
 
 let client = null;
@@ -9,11 +8,12 @@ let db = null;
 export async function getDb() {
   if (db) return db;
 
-  if (!MONGODB_URI) {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
     throw new Error('MONGODB_URI is not set');
   }
 
-  client = new MongoClient(MONGODB_URI);
+  client = new MongoClient(uri);
   await client.connect();
   db = client.db(DB_NAME);
 

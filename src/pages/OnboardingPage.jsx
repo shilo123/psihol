@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../shared/authStore'
 import { CHALLENGES, PERSONALITIES, PARENTING_STYLES } from '../../shared/constants'
+import BirthDatePicker from '../components/BirthDatePicker'
 
 export default function OnboardingPage() {
   const navigate = useNavigate()
@@ -257,15 +258,10 @@ export default function OnboardingPage() {
                   {/* Birth Date */}
                   <div>
                     <label className="block text-sm font-bold text-text-main mb-2">תאריך לידה</label>
-                    <div className="relative">
-                      <span className="material-symbols-rounded absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl">calendar_month</span>
-                      <input
-                        type="date"
-                        value={childBirthDate}
-                        onChange={e => setChildBirthDate(e.target.value)}
-                        className="w-full h-14 pr-12 pl-3 rounded-2xl border-2 border-gray-200 bg-white/70 text-text-main text-base font-medium outline-none transition-all duration-200 hover:border-gray-300 focus:ring-4 focus:ring-primary/10 focus:border-primary"
-                      />
-                    </div>
+                    <BirthDatePicker
+                      value={childBirthDate}
+                      onChange={setChildBirthDate}
+                    />
                   </div>
 
                   {/* Gender Toggle */}
