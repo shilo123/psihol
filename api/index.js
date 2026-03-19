@@ -1,10 +1,9 @@
 import 'dotenv/config';
 import express from 'express';
-import serverless from 'serverless-http';
-import authRoutes from '../../server/routes/auth.js';
-import chatRoutes from '../../server/routes/chat.js';
-import userRoutes from '../../server/routes/user.js';
-import adminRoutes from '../../server/routes/admin.js';
+import authRoutes from '../server/routes/auth.js';
+import chatRoutes from '../server/routes/chat.js';
+import userRoutes from '../server/routes/user.js';
+import adminRoutes from '../server/routes/admin.js';
 
 const app = express();
 
@@ -25,4 +24,4 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-export const handler = serverless(app);
+export default app;

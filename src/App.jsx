@@ -5,6 +5,7 @@ import ChatPage from './pages/ChatPage'
 import OnboardingPage from './pages/OnboardingPage'
 import SettingsPage from './pages/SettingsPage'
 import AdminPage from './pages/AdminPage'
+import ToastContainer from './components/ToastContainer'
 
 export default function App() {
   const init = useAuthStore((s) => s.init)
@@ -15,6 +16,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <ToastContainer />
       <Routes>
         <Route path="/" element={<ChatPage />} />
         <Route path="/onboarding" element={<OnboardingPage />} />

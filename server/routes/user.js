@@ -1,17 +1,14 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { readJSON, writeJSON, getUserFromToken } from '../helpers.js';
+import { getUserFromToken, updateUser, findUserById } from '../db.js';
 
 const router = Router();
 
-// GET /profile - Get user profile
+// GET /profile
 router.get('/profile', async (req, res) => {
   try {
     const user = await getUserFromToken(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
     res.json(user);
   } catch (error) {
     console.error('Get profile error:', error);
@@ -19,44 +16,32 @@ router.get('/profile', async (req, res) => {
   }
 });
 
-// PUT /profile - Update user profile
+// PUT /profile
 router.put('/profile', async (req, res) => {
   try {
     const user = await getUserFromToken(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
     const { parentName, parentAge, parentStyle, challenges } = req.body;
+    const updates = {};
+    if (parentName !== undefined) updates.parentName = parentName;
+    if (parentAge !== undefined) updates.parentAge = parentAge;
+    if (parentStyle !== undefined) updates.parentStyle = parentStyle;
+    if (challenges !== undefined) updates.challenges = challenges;
 
-    const users = await readJSON('users.json');
-    const userIndex = users.findIndex(u => u.id === user.id);
-
-    if (userIndex === -1) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    if (parentName !== undefined) users[userIndex].parentName = parentName;
-    if (parentAge !== undefined) users[userIndex].parentAge = parentAge;
-    if (parentStyle !== undefined) users[userIndex].parentStyle = parentStyle;
-    if (challenges !== undefined) users[userIndex].challenges = challenges;
-
-    await writeJSON('users.json', users);
-    res.json(users[userIndex]);
+    const updatedUser = await updateUser(user.id, updates);
+    res.json(updatedUser);
   } catch (error) {
     console.error('Update profile error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// GET /children - Get user's children
+// GET /children
 router.get('/children', async (req, res) => {
   try {
     const user = await getUserFromToken(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
     res.json(user.children || []);
   } catch (error) {
     console.error('Get children error:', error);
@@ -64,19 +49,14 @@ router.get('/children', async (req, res) => {
   }
 });
 
-// POST /children - Add a child
+// POST /children
 router.post('/children', async (req, res) => {
   try {
     const user = await getUserFromToken(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
     const { name, birthDate, gender, personality } = req.body;
-
-    if (!name) {
-      return res.status(400).json({ error: 'Child name is required' });
-    }
+    if (!name) return res.status(400).json({ error: 'Child name is required' });
 
     const child = {
       id: uuidv4(),
@@ -86,15 +66,8 @@ router.post('/children', async (req, res) => {
       personality: personality || ''
     };
 
-    const users = await readJSON('users.json');
-    const userIndex = users.findIndex(u => u.id === user.id);
-
-    if (userIndex === -1) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    users[userIndex].children.push(child);
-    await writeJSON('users.json', users);
+    const children = [...(user.children || []), child];
+    await updateUser(user.id, { children });
 
     res.status(201).json(child);
   } catch (error) {
@@ -103,36 +76,25 @@ router.post('/children', async (req, res) => {
   }
 });
 
-// PUT /children/:id - Update a child
+// PUT /children/:id
 router.put('/children/:id', async (req, res) => {
   try {
     const user = await getUserFromToken(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
     const { name, birthDate, gender, personality } = req.body;
+    const children = [...(user.children || [])];
+    const childIndex = children.findIndex(c => c.id === req.params.id);
 
-    const users = await readJSON('users.json');
-    const userIndex = users.findIndex(u => u.id === user.id);
+    if (childIndex === -1) return res.status(404).json({ error: 'Child not found' });
 
-    if (userIndex === -1) {
-      return res.status(404).json({ error: 'User not found' });
-    }
+    if (name !== undefined) children[childIndex].name = name;
+    if (birthDate !== undefined) children[childIndex].birthDate = birthDate;
+    if (gender !== undefined) children[childIndex].gender = gender;
+    if (personality !== undefined) children[childIndex].personality = personality;
 
-    const childIndex = users[userIndex].children.findIndex(c => c.id === req.params.id);
-
-    if (childIndex === -1) {
-      return res.status(404).json({ error: 'Child not found' });
-    }
-
-    if (name !== undefined) users[userIndex].children[childIndex].name = name;
-    if (birthDate !== undefined) users[userIndex].children[childIndex].birthDate = birthDate;
-    if (gender !== undefined) users[userIndex].children[childIndex].gender = gender;
-    if (personality !== undefined) users[userIndex].children[childIndex].personality = personality;
-
-    await writeJSON('users.json', users);
-    res.json(users[userIndex].children[childIndex]);
+    await updateUser(user.id, { children });
+    res.json(children[childIndex]);
   } catch (error) {
     console.error('Update child error:', error);
     res.status(500).json({ error: 'Internal server error' });

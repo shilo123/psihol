@@ -31,15 +31,6 @@ function groupConversationsByDate(conversations) {
   return groups.filter((g) => g.items.length > 0)
 }
 
-/* ------------------------------------------------------------------ */
-/*  Quick-prompt suggestions                                           */
-/* ------------------------------------------------------------------ */
-const QUICK_PROMPTS = [
-  { icon: 'family_restroom', text: 'הילד שלי מסרב לשמוע לי, מה עושים?' },
-  { icon: 'bedtime', text: 'איך מתמודדים עם קושי בשינה?' },
-  { icon: 'mood_bad', text: 'איך להגיב להתפרצות זעם?' },
-  { icon: 'devices', text: 'איך מפחיתים זמן מסך?' },
-]
 
 
 /* ================================================================== */
@@ -176,11 +167,6 @@ export default function ChatPage() {
       else next.add(id)
       return next
     })
-  }
-
-  function handleQuickPrompt(text) {
-    setInputText(text)
-    textareaRef.current?.focus()
   }
 
   /* ================================================================ */
@@ -343,21 +329,6 @@ export default function ChatPage() {
                   </div>
                 </div>
 
-                {/* Quick prompts */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
-                  {QUICK_PROMPTS.map((qp) => (
-                    <button
-                      key={qp.text}
-                      onClick={() => handleQuickPrompt(qp.text)}
-                      className="flex items-center gap-3 p-4 bg-white dark:bg-surface-dark rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md hover:border-primary/30 hover:bg-primary/5 transition-all duration-200 text-right group"
-                    >
-                      <div className="size-10 shrink-0 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                        <span className="material-symbols-outlined text-primary text-lg">{qp.icon}</span>
-                      </div>
-                      <span className="text-sm text-text-main leading-snug">{qp.text}</span>
-                    </button>
-                  ))}
-                </div>
               </div>
             ) : (
               /* ---- Messages list ---- */

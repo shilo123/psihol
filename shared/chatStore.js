@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { api } from './api.js'
 import { useAuthStore } from './authStore.js'
+import { toast } from './toastStore.js'
 
 function parseSSEStream(body, { onUserMessage, onChunk, onDone, onError }) {
   return new Promise(async (resolve) => {
@@ -52,6 +53,7 @@ export const useChatStore = create((set, get) => ({
       set({ conversations, loading: false })
     } catch {
       set({ loading: false })
+      toast.error('לא הצלחנו לטעון את השיחות. נסו שוב.')
     }
   },
 
@@ -80,6 +82,7 @@ export const useChatStore = create((set, get) => ({
       }))
       return conv
     } catch {
+      toast.error('לא הצלחנו ליצור שיחה חדשה. נסו שוב.')
       return null
     }
   },
@@ -94,6 +97,7 @@ export const useChatStore = create((set, get) => ({
       set({ messages })
     } catch {
       set({ messages: [] })
+      toast.error('לא הצלחנו לטעון את ההודעות.')
     }
   },
 
@@ -125,7 +129,10 @@ export const useChatStore = create((set, get) => ({
             streamingContent: state.streamingContent + chunk
           }))
         },
-        onError: (err) => console.error('Stream error:', err),
+        onError: (err) => {
+          console.error('Stream error:', err)
+          toast.error('שגיאה בקבלת תשובה. נסו שוב.')
+        },
       })
 
       if (finalAssistantMessage) {
@@ -152,6 +159,7 @@ export const useChatStore = create((set, get) => ({
         sending: false,
         streamingContent: '',
       }))
+      toast.error('שגיאה בשליחת ההודעה. בדקו את החיבור ונסו שוב.')
     }
   },
 }))

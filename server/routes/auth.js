@@ -1,10 +1,10 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { readJSON, writeJSON } from '../helpers.js';
+import { findUserByEmail, createUser, updateUser, findUserById } from '../db.js';
 
 const router = Router();
 
-// POST /login - Google login stub
+// POST /login
 router.post('/login', async (req, res) => {
   try {
     const { email, name, picture } = req.body;
@@ -13,8 +13,7 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Email is required' });
     }
 
-    const users = await readJSON('users.json');
-    let user = users.find(u => u.email === email);
+    let user = await findUserByEmail(email);
 
     if (!user) {
       user = {
@@ -27,15 +26,12 @@ router.post('/login', async (req, res) => {
         parentStyle: '',
         children: [],
         challenges: [],
-        conversations: [],
         createdAt: new Date().toISOString()
       };
-      users.push(user);
-      await writeJSON('users.json', users);
+      await createUser(user);
     }
 
     const token = 'mock-token-' + user.id;
-
     res.json({ token, user });
   } catch (error) {
     console.error('Login error:', error);
@@ -48,16 +44,15 @@ router.post('/register', async (req, res) => {
   try {
     const { parentName, parentAge, parentStyle, children, challenges, email } = req.body;
 
-    const users = await readJSON('users.json');
-
-    // Find user by email or token
     const token = req.headers.authorization?.replace('Bearer ', '');
     const userId = token?.replace('mock-token-', '');
-    let userIndex = users.findIndex(u => u.id === userId || u.email === email);
 
-    if (userIndex === -1) {
-      // Create new user if not found
-      const newUser = {
+    let user = await findUserById(userId);
+    if (!user && email) user = await findUserByEmail(email);
+
+    if (!user) {
+      // Create new user
+      user = {
         id: uuidv4(),
         email: email || '',
         name: parentName || '',
@@ -73,20 +68,17 @@ router.post('/register', async (req, res) => {
           personality: child.personality || ''
         })),
         challenges: challenges || [],
-        conversations: [],
         createdAt: new Date().toISOString()
       };
-      users.push(newUser);
-      await writeJSON('users.json', users);
-      return res.json(newUser);
+      await createUser(user);
+      return res.json(user);
     }
 
     // Update existing user
-    users[userIndex] = {
-      ...users[userIndex],
-      parentName: parentName || users[userIndex].parentName,
-      parentAge: parentAge || users[userIndex].parentAge,
-      parentStyle: parentStyle || users[userIndex].parentStyle,
+    const updates = {
+      parentName: parentName || user.parentName,
+      parentAge: parentAge || user.parentAge,
+      parentStyle: parentStyle || user.parentStyle,
       children: (children || []).map(child => ({
         id: child.id || uuidv4(),
         name: child.name,
@@ -94,11 +86,11 @@ router.post('/register', async (req, res) => {
         gender: child.gender,
         personality: child.personality || ''
       })),
-      challenges: challenges || users[userIndex].challenges
+      challenges: challenges || user.challenges
     };
 
-    await writeJSON('users.json', users);
-    res.json(users[userIndex]);
+    const updatedUser = await updateUser(user.id, updates);
+    res.json(updatedUser);
   } catch (error) {
     console.error('Register error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -115,8 +107,7 @@ router.get('/me', async (req, res) => {
     }
 
     const userId = token.replace('mock-token-', '');
-    const users = await readJSON('users.json');
-    const user = users.find(u => u.id === userId);
+    const user = await findUserById(userId);
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });

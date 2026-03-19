@@ -4,11 +4,13 @@ import { dirname, join } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
 const DATA_DIR = join(__dirname, 'data');
 
-const IS_NETLIFY = !!process.env.NETLIFY;
+// Serverless environments (Netlify / Vercel) have read-only filesystems
+const IS_SERVERLESS = !!(process.env.NETLIFY || process.env.VERCEL);
 
-// In-memory store for serverless (Netlify) where filesystem is read-only
+// In-memory store for serverless where filesystem is read-only
 const memoryStore = {};
 
 async function loadInitialData(filename) {
@@ -22,7 +24,7 @@ async function loadInitialData(filename) {
 }
 
 export async function readJSON(filename) {
-  if (IS_NETLIFY) {
+  if (IS_SERVERLESS) {
     if (!(filename in memoryStore)) {
       memoryStore[filename] = await loadInitialData(filename);
     }
@@ -42,7 +44,7 @@ export async function readJSON(filename) {
 }
 
 export async function writeJSON(filename, data) {
-  if (IS_NETLIFY) {
+  if (IS_SERVERLESS) {
     memoryStore[filename] = data;
     return;
   }

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { api } from './api.js'
+import { toast } from './toastStore.js'
 
 export const useAuthStore = create((set, get) => ({
   user: null,
@@ -49,6 +50,7 @@ export const useAuthStore = create((set, get) => ({
       return data.user
     } catch {
       set({ loading: false })
+      toast.error('שגיאה בהתחברות. בדקו את הפרטים ונסו שוב.')
       return null
     }
   },
@@ -61,6 +63,7 @@ export const useAuthStore = create((set, get) => ({
       return data
     } catch {
       set({ loading: false })
+      toast.error('שגיאה בשמירת הפרטים. נסו שוב.')
       return null
     }
   },

@@ -1,50 +1,37 @@
 import { Router } from 'express';
-import fs from 'fs/promises';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import { readJSON } from '../helpers.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const PROMPT_FILE = join(__dirname, '..', 'data', 'system-prompt.json');
+import { getAllUsers, countConversations, getSystemPrompt, setSystemPrompt } from '../db.js';
 
 const router = Router();
 
-// GET /system-prompt - Get the system prompt
+// GET /system-prompt
 router.get('/system-prompt', async (req, res) => {
   try {
-    const data = await fs.readFile(PROMPT_FILE, 'utf-8');
-    const promptData = JSON.parse(data);
-    res.json(promptData);
+    const prompt = await getSystemPrompt();
+    res.json({ prompt });
   } catch (error) {
     console.error('Get system prompt error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// PUT /system-prompt - Update the system prompt
+// PUT /system-prompt
 router.put('/system-prompt', async (req, res) => {
   try {
     const { prompt } = req.body;
+    if (!prompt) return res.status(400).json({ error: 'Prompt is required' });
 
-    if (!prompt) {
-      return res.status(400).json({ error: 'Prompt is required' });
-    }
-
-    const promptData = { prompt };
-    await fs.writeFile(PROMPT_FILE, JSON.stringify(promptData, null, 2), 'utf-8');
-
-    res.json(promptData);
+    await setSystemPrompt(prompt);
+    res.json({ prompt });
   } catch (error) {
     console.error('Update system prompt error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// GET /users - List all users (admin)
+// GET /users
 router.get('/users', async (req, res) => {
   try {
-    const users = await readJSON('users.json');
+    const users = await getAllUsers();
     res.json(users.map(u => ({
       id: u.id,
       name: u.parentName || u.name || '',
@@ -58,14 +45,14 @@ router.get('/users', async (req, res) => {
   }
 });
 
-// GET /stats - Quick stats
+// GET /stats
 router.get('/stats', async (req, res) => {
   try {
-    const users = await readJSON('users.json');
-    const chats = await readJSON('chats.json');
+    const users = await getAllUsers();
+    const totalConversations = await countConversations();
     res.json({
       totalUsers: users.length,
-      totalConversations: chats.length,
+      totalConversations,
       status: 'active'
     });
   } catch (error) {
