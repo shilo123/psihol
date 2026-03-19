@@ -107,6 +107,48 @@ export async function countConversations() {
   return database.collection('conversations').countDocuments();
 }
 
+// --- Token usage tracking ---
+export async function trackTokenUsage({ inputTokens, outputTokens }) {
+  const database = await getDb();
+  await database.collection('token_usage').insertOne({
+    inputTokens,
+    outputTokens,
+    inputCost: (inputTokens / 1_000_000) * 2.00,   // GPT-4.1 input price
+    outputCost: (outputTokens / 1_000_000) * 8.00,  // GPT-4.1 output price
+    timestamp: new Date(),
+  });
+}
+
+export async function getTokenUsageStats() {
+  const database = await getDb();
+  const result = await database.collection('token_usage').aggregate([
+    {
+      $group: {
+        _id: null,
+        totalInputTokens: { $sum: '$inputTokens' },
+        totalOutputTokens: { $sum: '$outputTokens' },
+        totalInputCost: { $sum: '$inputCost' },
+        totalOutputCost: { $sum: '$outputCost' },
+        totalMessages: { $sum: 1 },
+      }
+    }
+  ]).toArray();
+
+  if (result.length === 0) {
+    return { totalInputTokens: 0, totalOutputTokens: 0, totalInputCost: 0, totalOutputCost: 0, totalMessages: 0, totalCost: 0 };
+  }
+
+  const r = result[0];
+  return {
+    totalInputTokens: r.totalInputTokens,
+    totalOutputTokens: r.totalOutputTokens,
+    totalInputCost: r.totalInputCost,
+    totalOutputCost: r.totalOutputCost,
+    totalMessages: r.totalMessages,
+    totalCost: r.totalInputCost + r.totalOutputCost,
+  };
+}
+
 // --- Settings (system prompt etc.) ---
 export async function getSetting(key) {
   const database = await getDb();

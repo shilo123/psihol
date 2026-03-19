@@ -10,6 +10,7 @@ import {
   updateConversationAfterChat,
   deleteConversation,
   updateConversation,
+  trackTokenUsage,
 } from '../db.js';
 
 const router = Router();
@@ -50,13 +51,17 @@ function buildSystemMessage(systemPrompt, user) {
   }
 
   contextParts.push('\nהתאימי את התשובות שלך לפרופיל הספציפי של הילד/ים. השתמשי בשמות שלהם. התייחסי לגיל ולאתגרים.');
+  contextParts.push('תמיד תני תשובות מפורטות, מקצועיות ואמפתיות. אל תקצרי. השתמשי בדוגמאות ובטיפים מעשיים.');
 
   // Multi-child selection instructions
   if (user.children && user.children.length > 1) {
     const childButtons = user.children.map(c => `[[child:${c.name}:${c.personality || 'calm'}]]`).join(' ');
-    contextParts.push(`\nחשוב מאוד: כשיש יותר מילד אחד ולא ברור על איזה ילד ההורה מדבר/ת, או בתחילת שיחה חדשה, שאלי על איזה ילד מדובר והציגי את הכפתורים הבאים בשורה נפרדת:`);
+    contextParts.push(`\n*** הוראה קריטית - בחירת ילד ***`);
+    contextParts.push(`להורה הזה יש ${user.children.length} ילדים. בהודעה הראשונה בכל שיחה חדשה, או כשלא ברור על איזה ילד מדובר, חובה לשאול את ההורה על איזה ילד הוא/היא רוצה לדבר.`);
+    contextParts.push(`את חייבת להציג את הכפתורים האלה בשורה נפרדת כדי שההורה יוכל לבחור:`);
     contextParts.push(childButtons);
-    contextParts.push('פורמט הכפתורים חייב להיות בדיוק [[child:שם:אופי]] - המערכת תציג אותם ככפתורים לחיצים. אל תשתמשי בפורמט הזה בהקשר אחר. אל תשני את הערכים.');
+    contextParts.push(`הפורמט [[child:שם:אופי]] הוא חובה - המערכת הופכת אותו לכפתורים לחיצים. אל תשני את הערכים.`);
+    contextParts.push(`דוגמה לתשובה ראשונה: "שלום ${user.parentName}! שמחה לראות אותך 😊 על איזה מהילדים תרצה לדבר היום?\n\n${childButtons}"`);
   }
 
   return contextParts.join('\n');
@@ -173,6 +178,11 @@ async function buildOpenAIMessages(systemMessage, allMessages) {
   ];
 }
 
+// Estimate tokens (rough: 1 token ≈ 4 chars for Hebrew/mixed)
+function estimateTokens(text) {
+  return Math.ceil((text || '').length / 3);
+}
+
 // Stream OpenAI response
 async function streamOpenAI(res, messages) {
   let fullContent = '';
@@ -191,6 +201,7 @@ async function streamOpenAI(res, messages) {
           temperature: 0.7,
           max_tokens: 1500,
           stream: true,
+          stream_options: { include_usage: true },
         }),
       });
 
@@ -202,6 +213,7 @@ async function streamOpenAI(res, messages) {
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
+        let usage = null;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -222,9 +234,16 @@ async function streamOpenAI(res, messages) {
                 fullContent += delta;
                 res.write(`data: ${JSON.stringify({ type: 'chunk', content: delta })}\n\n`);
               }
+              // Capture usage from final chunk
+              if (parsed.usage) usage = parsed.usage;
             } catch {}
           }
         }
+
+        // Track token usage
+        const inputTokens = usage?.prompt_tokens || estimateTokens(messages.map(m => m.content).join(''));
+        const outputTokens = usage?.completion_tokens || estimateTokens(fullContent);
+        trackTokenUsage({ inputTokens, outputTokens }).catch(e => console.error('Token tracking error:', e));
       }
     } catch (error) {
       console.error('OpenAI stream failed:', error);

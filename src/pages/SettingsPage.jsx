@@ -552,32 +552,47 @@ export default function SettingsPage() {
       {/* ───────── API Cost Info ───────── */}
       <div className="max-w-[1024px] mx-auto px-4 mt-8">
         <div className="bg-gray-50 dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="material-symbols-outlined text-gray-400 text-base">payments</span>
-            <span className="text-xs font-bold text-gray-500">עלויות API (GPT-4.1)</span>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-gray-400 text-base">payments</span>
+              <span className="text-xs font-bold text-gray-500">עלויות API (GPT-4.1)</span>
+            </div>
+            {apiStats?.tokens?.totalCost > 0 && (
+              <span className="text-sm font-black text-primary bg-primary/10 px-3 py-1 rounded-full">
+                ${apiStats.tokens.totalCost.toFixed(4)}
+              </span>
+            )}
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
             <div>
-              <p className="text-[10px] text-gray-400 mb-0.5">Input</p>
-              <p className="text-xs font-mono font-bold text-gray-600">$2.00 <span className="text-gray-400 font-normal">/ 1M tokens</span></p>
+              <p className="text-[10px] text-gray-400 mb-0.5">Input tokens</p>
+              <p className="text-xs font-mono font-bold text-gray-600">{apiStats?.tokens?.totalInputTokens?.toLocaleString() ?? '...'}</p>
+              <p className="text-[10px] text-gray-400">${apiStats?.tokens?.totalInputCost?.toFixed(4) ?? '0'}</p>
             </div>
             <div>
-              <p className="text-[10px] text-gray-400 mb-0.5">Output</p>
-              <p className="text-xs font-mono font-bold text-gray-600">$8.00 <span className="text-gray-400 font-normal">/ 1M tokens</span></p>
+              <p className="text-[10px] text-gray-400 mb-0.5">Output tokens</p>
+              <p className="text-xs font-mono font-bold text-gray-600">{apiStats?.tokens?.totalOutputTokens?.toLocaleString() ?? '...'}</p>
+              <p className="text-[10px] text-gray-400">${apiStats?.tokens?.totalOutputCost?.toFixed(4) ?? '0'}</p>
             </div>
             <div>
-              <p className="text-[10px] text-gray-400 mb-0.5">עלות ממוצעת להודעה</p>
-              <p className="text-xs font-mono font-bold text-gray-600">~$0.005</p>
+              <p className="text-[10px] text-gray-400 mb-0.5">סה"כ הודעות AI</p>
+              <p className="text-xs font-mono font-bold text-gray-600">{apiStats?.tokens?.totalMessages ?? '0'}</p>
             </div>
             <div>
               <p className="text-[10px] text-gray-400 mb-0.5">סה"כ שיחות</p>
               <p className="text-xs font-mono font-bold text-primary">{apiStats?.totalConversations ?? '...'}</p>
             </div>
           </div>
-          <p className="text-[10px] text-gray-400 mt-3 text-center">
-            * הערכת עלות: ~500 tokens input + ~400 tokens output לכל הודעה = ~$0.005 להודעה.
-            סיכום היסטוריה משתמש ב-gpt-4.1-mini ($0.40/$1.60 / 1M tokens).
-          </p>
+          <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-200">
+            <p className="text-[10px] text-gray-400">
+              תמחור: $2.00/1M input • $8.00/1M output • סיכום: gpt-4.1-mini ($0.40/$1.60)
+            </p>
+            {apiStats?.tokens?.totalMessages > 0 && (
+              <p className="text-[10px] font-bold text-gray-500">
+                ~${(apiStats.tokens.totalCost / apiStats.tokens.totalMessages).toFixed(4)} / הודעה
+              </p>
+            )}
+          </div>
         </div>
       </div>
 

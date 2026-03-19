@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getAllUsers, countConversations, getSystemPrompt, setSystemPrompt } from '../db.js';
+import { getAllUsers, countConversations, getSystemPrompt, setSystemPrompt, getTokenUsageStats } from '../db.js';
 
 const router = Router();
 
@@ -50,10 +50,12 @@ router.get('/stats', async (req, res) => {
   try {
     const users = await getAllUsers();
     const totalConversations = await countConversations();
+    const tokenStats = await getTokenUsageStats();
     res.json({
       totalUsers: users.length,
       totalConversations,
-      status: 'active'
+      status: 'active',
+      tokens: tokenStats,
     });
   } catch (error) {
     res.status(500).json({ error: 'Internal server error' });
