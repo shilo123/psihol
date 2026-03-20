@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { getUserFromToken, updateUser, findUserById } from '../db.js';
+import { getUserFromToken, updateUser, findUserById, getDb } from '../db.js';
 
 const router = Router();
 
@@ -97,6 +97,24 @@ router.put('/children/:id', async (req, res) => {
     res.json(children[childIndex]);
   } catch (error) {
     console.error('Update child error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// DELETE /account - Self-delete account and all data
+router.delete('/account', async (req, res) => {
+  try {
+    const user = await getUserFromToken(req);
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+    const db = await getDb();
+    await db.collection('users').deleteOne({ id: user.id });
+    await db.collection('conversations').deleteMany({ userId: user.id });
+    await db.collection('memories').deleteMany({ userId: user.id });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete account error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

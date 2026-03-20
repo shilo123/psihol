@@ -111,6 +111,20 @@ export default function SettingsPage() {
     }
   }
 
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false)
+  const [deletingAccount, setDeletingAccount] = useState(false)
+
+  async function handleDeleteAccount() {
+    setDeletingAccount(true)
+    try {
+      await api.deleteAccount()
+      logout()
+      navigate('/')
+    } catch {
+      setDeletingAccount(false)
+    }
+  }
+
   function handleLogout() {
     logout()
     navigate('/')
@@ -546,6 +560,21 @@ export default function SettingsPage() {
                   <span className="material-symbols-outlined text-lg text-red-500">logout</span>
                   <span className="text-sm font-medium text-red-500 group-hover:text-red-600">התנתקות</span>
                 </button>
+
+                {/* Delete Account */}
+                <button
+                  onClick={() => setShowDeleteAccount(true)}
+                  className="flex items-center justify-between w-full px-6 py-4 text-right hover:bg-red-50/50 transition-colors group"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="material-symbols-outlined text-lg text-gray-400 group-hover:text-red-400">delete_forever</span>
+                    <div>
+                      <p className="text-sm font-medium text-gray-400 group-hover:text-red-400">מחיקת חשבון</p>
+                      <p className="text-xs text-gray-300 group-hover:text-red-300 mt-0.5">מחיקת כל הנתונים לצמיתות</p>
+                    </div>
+                  </div>
+                  <span className="material-symbols-outlined text-lg text-gray-300 group-hover:text-red-300">chevron_left</span>
+                </button>
               </div>
             </div>
           </div>
@@ -610,6 +639,59 @@ export default function SettingsPage() {
           </div>
         </div>
       </footer>
+
+      {/* ───────── Delete Account Modal ───────── */}
+      {showDeleteAccount && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={() => setShowDeleteAccount(false)}>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
+                <span className="material-symbols-outlined text-red-600 text-4xl">warning</span>
+              </div>
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 text-center mb-2">מחיקת חשבון</h3>
+            <p className="text-sm text-gray-500 text-center mb-2">
+              האם למחוק את החשבון שלך לצמיתות?
+            </p>
+            <div className="text-sm text-center mb-6 space-y-1">
+              <p className="text-gray-500 flex items-center justify-center gap-1.5">
+                <span className="material-symbols-outlined text-red-400 text-base">chat</span>
+                כל השיחות יימחקו
+              </p>
+              <p className="text-gray-500 flex items-center justify-center gap-1.5">
+                <span className="material-symbols-outlined text-red-400 text-base">psychology</span>
+                כל הזכרונות יימחקו
+              </p>
+              <p className="text-gray-500 flex items-center justify-center gap-1.5">
+                <span className="material-symbols-outlined text-red-400 text-base">person_off</span>
+                פרטי המשתמש יימחקו
+              </p>
+            </div>
+            <p className="text-xs text-red-500 font-medium text-center mb-6">פעולה זו בלתי הפיכה.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteAccount(false)}
+                className="flex-1 h-11 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
+              >
+                ביטול
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deletingAccount}
+                className="flex-1 h-11 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {deletingAccount ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <span className="material-symbols-outlined text-lg">delete_forever</span>
+                )}
+                {deletingAccount ? 'מוחק...' : 'מחק חשבון'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ───────── System Prompt Modal ───────── */}
       {showPromptModal && (
