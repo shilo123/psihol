@@ -117,13 +117,21 @@ export async function countConversations() {
 }
 
 // --- Token usage tracking ---
-export async function trackTokenUsage({ inputTokens, outputTokens }) {
+// Pricing per 1M tokens (as of 2026)
+const MODEL_PRICING = {
+  'gpt-4.1':      { input: 2.00, output: 8.00 },
+  'gpt-4.1-mini': { input: 0.40, output: 1.60 },
+};
+
+export async function trackTokenUsage({ inputTokens, outputTokens, model = 'gpt-4.1' }) {
   const database = await getDb();
+  const pricing = MODEL_PRICING[model] || MODEL_PRICING['gpt-4.1'];
   await database.collection('token_usage').insertOne({
     inputTokens,
     outputTokens,
-    inputCost: (inputTokens / 1_000_000) * 2.00,   // GPT-4.1 input price
-    outputCost: (outputTokens / 1_000_000) * 8.00,  // GPT-4.1 output price
+    model,
+    inputCost: (inputTokens / 1_000_000) * pricing.input,
+    outputCost: (outputTokens / 1_000_000) * pricing.output,
     timestamp: new Date(),
   });
 }

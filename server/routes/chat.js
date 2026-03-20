@@ -164,6 +164,14 @@ async function summarizeHistory(messages) {
 
     if (!response.ok) return null;
     const data = await response.json();
+    const usage = data.usage;
+    if (usage) {
+      trackTokenUsage({
+        inputTokens: usage.prompt_tokens || 0,
+        outputTokens: usage.completion_tokens || 0,
+        model: 'gpt-4.1-mini',
+      }).catch(() => {});
+    }
     return data.choices[0].message.content;
   } catch (error) {
     console.error('Summary generation failed:', error);
@@ -264,7 +272,7 @@ async function streamOpenAI(res, messages) {
         // Track token usage
         const inputTokens = usage?.prompt_tokens || estimateTokens(messages.map(m => m.content).join(''));
         const outputTokens = usage?.completion_tokens || estimateTokens(fullContent);
-        trackTokenUsage({ inputTokens, outputTokens }).catch(e => console.error('Token tracking error:', e));
+        trackTokenUsage({ inputTokens, outputTokens, model: 'gpt-4.1' }).catch(e => console.error('Token tracking error:', e));
       }
     } catch (error) {
       console.error('OpenAI stream failed:', error);
