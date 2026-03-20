@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import serverless from 'serverless-http';
 import authRoutes from '../server/routes/auth.js';
 import chatRoutes from '../server/routes/chat.js';
 import userRoutes from '../server/routes/user.js';
@@ -24,4 +25,4 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-export default app;
+export default serverless(app);
