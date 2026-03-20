@@ -1,6 +1,14 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../../shared/api'
+import { CHALLENGES, PERSONALITIES, PARENTING_STYLES } from '../../shared/constants'
+
+// Build lookup maps: English value -> Hebrew label
+const LABELS = {}
+for (const list of [CHALLENGES, PERSONALITIES, PARENTING_STYLES]) {
+  for (const item of list) LABELS[item.value] = item.label
+}
+function t(val) { return LABELS[val] || val }
 
 // ---- User Detail Popup ----
 function UserDetailPopup({ userId, onClose, onDelete, onSave }) {
@@ -90,7 +98,7 @@ function UserDetailPopup({ userId, onClose, onDelete, onSave }) {
               {user.authProvider && (
                 <span className="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-semibold rounded-full flex items-center gap-1">
                   <span className="material-symbols-outlined text-sm">{user.authProvider === 'google' ? 'g_mobiledata' : 'mail'}</span>
-                  {user.authProvider}
+                  {user.authProvider === 'google' ? 'גוגל' : user.authProvider === 'email' ? 'אימייל' : user.authProvider}
                 </span>
               )}
               {user.isGuest && (
@@ -103,7 +111,7 @@ function UserDetailPopup({ userId, onClose, onDelete, onSave }) {
                 <span className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-semibold rounded-full">גיל {user.parentAge}</span>
               )}
               {user.parentStyle && (
-                <span className="px-3 py-1 bg-purple-50 text-purple-700 text-xs font-semibold rounded-full">{user.parentStyle}</span>
+                <span className="px-3 py-1 bg-purple-50 text-purple-700 text-xs font-semibold rounded-full">{t(user.parentStyle)}</span>
               )}
             </div>
 
@@ -146,7 +154,7 @@ function UserDetailPopup({ userId, onClose, onDelete, onSave }) {
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {user.challenges.map(c => (
-                    <span key={c} className="px-3 py-1 bg-amber-50 text-amber-700 text-xs font-semibold rounded-full">{c}</span>
+                    <span key={c} className="px-3 py-1 bg-amber-50 text-amber-700 text-xs font-semibold rounded-full">{t(c)}</span>
                   ))}
                 </div>
               </div>
@@ -165,7 +173,7 @@ function UserDetailPopup({ userId, onClose, onDelete, onSave }) {
                       <p className="text-sm text-gray-700">{m.content}</p>
                       <div className="text-xs text-gray-400 mt-1 flex gap-2">
                         {m.childName && <span className="text-primary font-medium">{m.childName}</span>}
-                        {m.category && <span>{m.category}</span>}
+                        {m.category && <span>{m.category === 'general' ? 'כללי' : m.category}</span>}
                       </div>
                     </div>
                   ))}
@@ -490,7 +498,7 @@ export default function AdminPage() {
                             <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-full">Google</span>
                           )}
                           {user.parentStyle && (
-                            <span className="px-2 py-0.5 bg-purple-50 text-purple-600 text-[10px] font-bold rounded-full">{user.parentStyle}</span>
+                            <span className="px-2 py-0.5 bg-purple-50 text-purple-600 text-[10px] font-bold rounded-full">{t(user.parentStyle)}</span>
                           )}
                         </div>
                         <p className="text-xs text-gray-500 truncate dir-ltr text-right">{user.email}</p>
@@ -503,7 +511,7 @@ export default function AdminPage() {
                               }`}>
                                 <span className="material-symbols-outlined" style={{fontSize: '11px'}}>{c.gender === 'girl' ? 'girl' : 'boy'}</span>
                                 {c.name}
-                                {c.personality && <span className="text-gray-400 mr-0.5">· {c.personality}</span>}
+                                {c.personality && <span className="text-gray-400 mr-0.5">· {t(c.personality)}</span>}
                               </span>
                             ))}
                           </div>
