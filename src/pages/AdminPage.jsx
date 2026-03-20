@@ -310,7 +310,7 @@ export default function AdminPage() {
     try {
       await api.updateSystemPrompt(systemPrompt)
       setSavedPrompt(systemPrompt)
-      setFeedback({ type: 'success', message: 'System Prompt נשמר בהצלחה' })
+      setFeedback({ type: 'success', message: 'הנחיות המערכת נשמרו בהצלחה' })
     } catch (err) {
       setFeedback({ type: 'error', message: 'שגיאה בשמירה: ' + err.message })
     } finally {
@@ -398,7 +398,7 @@ export default function AdminPage() {
               <span className="material-symbols-outlined text-primary text-xl">admin_panel_settings</span>
             </div>
             <h1 className="text-xl font-bold text-gray-900">ניהול מערכת</h1>
-            <span className="px-3 py-1 bg-red-50 text-red-600 text-xs font-semibold rounded-full">Admin</span>
+            <span className="px-3 py-1 bg-red-50 text-red-600 text-xs font-semibold rounded-full">מנהל</span>
           </div>
           <Link to="/" className="text-primary hover:text-primary/80 transition-colors flex items-center gap-1.5 text-sm font-medium">
             <span className="material-symbols-outlined text-lg">arrow_forward</span>
@@ -531,7 +531,7 @@ export default function AdminPage() {
                             <span className="px-2 py-0.5 bg-amber-50 text-amber-600 text-[10px] font-bold rounded-full">אורח</span>
                           )}
                           {user.authProvider === 'google' && (
-                            <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-full">Google</span>
+                            <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-full">גוגל</span>
                           )}
                           {user.parentStyle && (
                             <span className="px-2 py-0.5 bg-purple-50 text-purple-600 text-[10px] font-bold rounded-full">{t(user.parentStyle)}</span>
@@ -600,7 +600,7 @@ export default function AdminPage() {
                   <span className="material-symbols-outlined text-primary">psychology</span>
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-gray-900">System Prompt</h2>
+                  <h2 className="text-lg font-bold text-gray-900">הנחיות מערכת</h2>
                   <p className="text-sm text-gray-500">ההנחיות שמגדירות את אופי התשובות של הבוט</p>
                 </div>
               </div>
@@ -610,7 +610,7 @@ export default function AdminPage() {
                   value={systemPrompt}
                   onChange={e => setSystemPrompt(e.target.value)}
                   className="w-full min-h-[350px] bg-background-light border-2 border-gray-200 rounded-xl p-4 text-sm font-mono text-gray-800 leading-relaxed resize-y focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all placeholder:text-gray-400"
-                  placeholder="הכנס את ה-System Prompt כאן..."
+                  placeholder="הכנס את הנחיות המערכת כאן..."
                 />
                 <div className="mt-2 flex items-center justify-between text-xs text-gray-400">
                   <span>{systemPrompt.length.toLocaleString()} תווים</span>
@@ -653,7 +653,7 @@ export default function AdminPage() {
                   <span className="material-symbols-outlined text-amber-600">thermostat</span>
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-gray-900">Temperature</h2>
+                  <h2 className="text-lg font-bold text-gray-900">טמפרטורה</h2>
                   <p className="text-sm text-gray-500">קובע כמה יצירתיות/אקראיות בתשובות (0 = מדויק, 2 = יצירתי מאוד)</p>
                 </div>
               </div>
@@ -676,8 +676,8 @@ export default function AdminPage() {
                         try {
                           await api.updateTemperature(temperature)
                           setSavedTemperature(temperature)
-                          setFeedback({ type: 'success', message: `Temperature עודכן ל-${temperature.toFixed(1)}` })
-                        } catch { setFeedback({ type: 'error', message: 'שגיאה בשמירת Temperature' }) }
+                          setFeedback({ type: 'success', message: `טמפרטורה עודכנה ל-${temperature.toFixed(1)}` })
+                        } catch { setFeedback({ type: 'error', message: 'שגיאה בשמירת טמפרטורה' }) }
                       }}
                       className="px-4 py-2 bg-primary text-white text-sm font-bold rounded-xl hover:bg-primary/90 transition-colors"
                     >
@@ -703,7 +703,7 @@ export default function AdminPage() {
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-gray-900">ניסיון צ'אט</h2>
-                  <p className="text-sm text-gray-500">בדוק את ה-System Prompt והטמפרטורה הנוכחיים</p>
+                  <p className="text-sm text-gray-500">בדוק את הנחיות המערכת והטמפרטורה הנוכחיים</p>
                 </div>
               </div>
 

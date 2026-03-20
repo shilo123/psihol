@@ -20,10 +20,10 @@ export const PERSONALITIES = [
 ]
 
 export const PARENTING_STYLES = [
-  { value: 'authoritative', label: 'סמכותי (Authoritative)' },
-  { value: 'permissive', label: 'מתירני (Permissive)' },
-  { value: 'authoritarian', label: 'סמכותני/קפדני (Authoritarian)' },
-  { value: 'uninvolved', label: 'לא מעורב (Uninvolved)' },
+  { value: 'authoritative', label: 'סמכותי' },
+  { value: 'permissive', label: 'מתירני' },
+  { value: 'authoritarian', label: 'סמכותני/קפדני' },
+  { value: 'uninvolved', label: 'לא מעורב' },
   { value: 'unsure', label: 'לא בטוח/ה' },
 ]
 
