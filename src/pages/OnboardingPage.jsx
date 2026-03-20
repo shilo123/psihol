@@ -8,9 +8,10 @@ export default function OnboardingPage() {
   const navigate = useNavigate()
   const completeOnboarding = useAuthStore(s => s.completeOnboarding)
   const loading = useAuthStore(s => s.loading)
+  const user = useAuthStore(s => s.user)
 
   const [step, setStep] = useState(1)
-  const [parentName, setParentName] = useState('')
+  const [parentName, setParentName] = useState(user?.parentName || user?.name || '')
   const [parentAge, setParentAge] = useState('')
   const [parentStyle, setParentStyle] = useState('')
 
@@ -127,14 +128,23 @@ export default function OnboardingPage() {
             <div className="relative p-6 sm:p-8">
               {/* Avatar */}
               <div className="flex justify-center mb-6">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-lg shadow-primary/30">
-                  <span className="material-symbols-rounded text-white text-4xl">person</span>
-                </div>
+                {user?.picture ? (
+                  <img
+                    src={user.picture}
+                    alt={user.name || ''}
+                    referrerPolicy="no-referrer"
+                    className="w-20 h-20 rounded-full shadow-lg shadow-primary/30 object-cover border-4 border-white"
+                  />
+                ) : (
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-lg shadow-primary/30">
+                    <span className="material-symbols-rounded text-white text-4xl">person</span>
+                  </div>
+                )}
               </div>
 
               {/* Title */}
               <h1 className="text-3xl font-black tracking-tight text-text-main text-center mb-2">
-                ספר/י לנו על עצמך
+                {user?.picture ? `שלום ${user.name?.split(' ')[0] || ''}! 👋` : 'ספר/י לנו על עצמך'}
               </h1>
               <p className="text-text-secondary text-center mb-8 text-sm">
                 המידע עוזר לנו להתאים את הייעוץ אליך
