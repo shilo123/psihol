@@ -1,27 +1,120 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
+import bcrypt from 'bcryptjs';
 import { findUserByEmail, createUser, updateUser, findUserById } from '../db.js';
 
 const router = Router();
 
-// POST /login
+// POST /login - Email + password login
 router.post('/login', async (req, res) => {
   try {
-    const { email, name, picture } = req.body;
+    const { email, password } = req.body;
 
-    if (!email) {
-      return res.status(400).json({ error: 'Email is required' });
+    if (!email || !password) {
+      return res.status(400).json({ error: 'נדרשים אימייל וסיסמה' });
+    }
+
+    const user = await findUserByEmail(email);
+    if (!user) {
+      return res.status(401).json({ error: 'אימייל או סיסמה שגויים' });
+    }
+
+    if (!user.passwordHash) {
+      return res.status(401).json({ error: 'חשבון זה נרשם דרך גוגל. השתמשו בכניסה דרך גוגל.' });
+    }
+
+    const match = await bcrypt.compare(password, user.passwordHash);
+    if (!match) {
+      return res.status(401).json({ error: 'אימייל או סיסמה שגויים' });
+    }
+
+    const token = 'mock-token-' + user.id;
+    res.json({ token, user: sanitizeUser(user) });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'שגיאה פנימית' });
+  }
+});
+
+// POST /signup - Email + password registration
+router.post('/signup', async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: 'נדרשים שם, אימייל וסיסמה' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'הסיסמה חייבת להכיל לפחות 6 תווים' });
+    }
+
+    const existing = await findUserByEmail(email);
+    if (existing) {
+      return res.status(409).json({ error: 'כתובת האימייל כבר רשומה במערכת' });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const user = {
+      id: uuidv4(),
+      email,
+      name,
+      picture: '',
+      passwordHash,
+      authProvider: 'email',
+      parentName: '',
+      parentAge: '',
+      parentStyle: '',
+      children: [],
+      challenges: [],
+      createdAt: new Date().toISOString()
+    };
+
+    await createUser(user);
+    const token = 'mock-token-' + user.id;
+    res.status(201).json({ token, user: sanitizeUser(user) });
+  } catch (error) {
+    console.error('Signup error:', error);
+    res.status(500).json({ error: 'שגיאה פנימית' });
+  }
+});
+
+// POST /google - Google Sign-In (verify ID token)
+router.post('/google', async (req, res) => {
+  try {
+    const { credential } = req.body;
+    if (!credential) {
+      return res.status(400).json({ error: 'Missing Google credential' });
+    }
+
+    // Verify token with Google
+    const googleRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`);
+    if (!googleRes.ok) {
+      return res.status(401).json({ error: 'Invalid Google token' });
+    }
+
+    const payload = await googleRes.json();
+    const { email, name, picture, sub: googleId } = payload;
+
+    // Verify audience matches our client ID
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    if (payload.aud !== clientId) {
+      return res.status(401).json({ error: 'Invalid token audience' });
     }
 
     let user = await findUserByEmail(email);
 
     if (!user) {
+      // Create new user from Google
       user = {
         id: uuidv4(),
         email,
         name: name || '',
         picture: picture || '',
-        parentName: '',
+        googleId,
+        authProvider: 'google',
+        parentName: name || '',
         parentAge: '',
         parentStyle: '',
         children: [],
@@ -29,13 +122,18 @@ router.post('/login', async (req, res) => {
         createdAt: new Date().toISOString()
       };
       await createUser(user);
+    } else if (!user.googleId) {
+      // Link Google to existing account
+      await updateUser(user.id, { googleId, picture: picture || user.picture, authProvider: 'google' });
+      user.googleId = googleId;
+      user.picture = picture || user.picture;
     }
 
     const token = 'mock-token-' + user.id;
-    res.json({ token, user });
+    res.json({ token, user: sanitizeUser(user) });
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Google login error:', error);
+    res.status(500).json({ error: 'שגיאה פנימית' });
   }
 });
 
@@ -51,7 +149,6 @@ router.post('/register', async (req, res) => {
     if (!user && email) user = await findUserByEmail(email);
 
     if (!user) {
-      // Create new user
       user = {
         id: uuidv4(),
         email: email || '',
@@ -71,10 +168,9 @@ router.post('/register', async (req, res) => {
         createdAt: new Date().toISOString()
       };
       await createUser(user);
-      return res.json(user);
+      return res.json(sanitizeUser(user));
     }
 
-    // Update existing user
     const updates = {
       parentName: parentName || user.parentName,
       parentAge: parentAge || user.parentAge,
@@ -90,7 +186,7 @@ router.post('/register', async (req, res) => {
     };
 
     const updatedUser = await updateUser(user.id, updates);
-    res.json(updatedUser);
+    res.json(sanitizeUser(updatedUser));
   } catch (error) {
     console.error('Register error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -122,7 +218,7 @@ router.post('/guest', async (req, res) => {
 
     await createUser(user);
     const token = 'mock-token-' + user.id;
-    res.json({ token, user });
+    res.json({ token, user: sanitizeUser(user) });
   } catch (error) {
     console.error('Guest login error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -145,11 +241,18 @@ router.get('/me', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json(user);
+    res.json(sanitizeUser(user));
   } catch (error) {
     console.error('Get me error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+// Helper: strip sensitive fields before sending to client
+function sanitizeUser(user) {
+  if (!user) return user;
+  const { passwordHash, ...safe } = user;
+  return safe;
+}
 
 export default router;

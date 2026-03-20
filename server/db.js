@@ -23,6 +23,14 @@ export async function getDb() {
   await db.collection('conversations').createIndex({ userId: 1 });
   await db.collection('conversations').createIndex({ userId: 1, createdAt: -1 });
   await db.collection('conversations').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+  await db.collection('conversations').createIndex({ lastUsedAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 }); // 30 days inactivity TTL
+  await db.collection('memories').createIndex({ userId: 1 });
+
+  // Backfill lastUsedAt for existing conversations that don't have it
+  await db.collection('conversations').updateMany(
+    { lastUsedAt: { $exists: false } },
+    { $set: { lastUsedAt: new Date() } }
+  );
 
   console.log('Connected to MongoDB:', DB_NAME);
   return db;
@@ -85,14 +93,15 @@ export async function pushMessage(conversationId, userId, message) {
   const database = await getDb();
   await database.collection('conversations').updateOne(
     { id: conversationId, userId },
-    { $push: { messages: message } }
+    { $push: { messages: message }, $set: { lastUsedAt: new Date() } }
   );
 }
 
 export async function updateConversationAfterChat(conversationId, userId, { title, assistantMessage }) {
   const database = await getDb();
   const update = { $push: { messages: assistantMessage } };
-  if (title) update.$set = { title };
+  update.$set = { lastUsedAt: new Date() };
+  if (title) update.$set.title = title;
   await database.collection('conversations').updateOne({ id: conversationId, userId }, update);
 }
 
@@ -172,6 +181,36 @@ export async function getSystemPrompt() {
 
 export async function setSystemPrompt(prompt) {
   await setSetting('systemPrompt', prompt);
+}
+
+// --- User Memories (per-user AI context) ---
+export async function getMemories(userId) {
+  const database = await getDb();
+  return database.collection('memories')
+    .find({ userId })
+    .sort({ updatedAt: -1 })
+    .toArray();
+}
+
+export async function addMemory(userId, memory) {
+  const database = await getDb();
+  const doc = {
+    id: memory.id,
+    userId,
+    childName: memory.childName || null,
+    content: memory.content,
+    category: memory.category || 'general',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  await database.collection('memories').insertOne(doc);
+  return doc;
+}
+
+export async function deleteMemory(id, userId) {
+  const database = await getDb();
+  const result = await database.collection('memories').deleteOne({ id, userId });
+  return result.deletedCount > 0;
 }
 
 // --- Auth helper ---

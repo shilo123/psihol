@@ -11,6 +11,8 @@ import {
   deleteConversation,
   updateConversation,
   trackTokenUsage,
+  getMemories,
+  addMemory,
 } from '../db.js';
 
 const router = Router();
@@ -23,7 +25,7 @@ const MAX_MESSAGES_BEFORE_SUMMARY = 20;
 // Helpers
 // ============================================================
 
-function buildSystemMessage(systemPrompt, user) {
+function buildSystemMessage(systemPrompt, user, memories = []) {
   let contextParts = [systemPrompt];
 
   if (user.parentName) contextParts.push(`\nשם ההורה: ${user.parentName}`);
@@ -51,12 +53,29 @@ function buildSystemMessage(systemPrompt, user) {
     contextParts.push(`\nאתגרים מרכזיים: ${labels.join(', ')}`);
   }
 
+  // User memories - things the AI remembers about this family
+  if (memories.length > 0) {
+    contextParts.push('\n*** זיכרונות מהשיחות הקודמות (השתמשי בהם בעדינות ובדרך אגב) ***');
+    memories.forEach(m => {
+      const childNote = m.childName ? ` (${m.childName})` : '';
+      contextParts.push(`- ${m.content}${childNote}`);
+    });
+    contextParts.push('השתמשי בזיכרונות אלה כדי להראות שאת מכירה את המשפחה. אל תציגי אותם כרשימה - שלבי אותם בטבעיות בשיחה. למשל: "אגב, מה עם..." או "איך הולך עם..."');
+  }
+
   contextParts.push('\nהתאימי את התשובות שלך לפרופיל הספציפי של הילד/ים. השתמשי בשמות שלהם. התייחסי לגיל ולאתגרים.');
   contextParts.push('תמיד תני תשובות מפורטות, מקצועיות ואמפתיות. אל תקצרי. השתמשי בדוגמאות ובטיפים מעשיים.');
 
+  // Memory extraction instruction
+  contextParts.push('\n*** שמירת זיכרונות ***');
+  contextParts.push('כשההורה מספר פרט חשוב על ילד (למשל: בעיה ספציפית, הישג, שינוי, התנהגות חוזרת), הוסיפי בסוף התשובה שלך תג מיוחד בפורמט:');
+  contextParts.push('[[memory:שם_הילד:תוכן_הזיכרון]]');
+  contextParts.push('לדוגמה: [[memory:יותם:עדיין עושה קקי במכנסיים]] או [[memory:נועה:התחילה לישון לבד]]');
+  contextParts.push('שמרי רק פרטים משמעותיים שיהיה חשוב לזכור בשיחות הבאות. אל תשמרי דברים טריוויאליים.');
+
   // Multi-child selection instructions
   if (user.children && user.children.length > 1) {
-    const childButtons = user.children.map(c => `[[child:${c.name}:${c.personality || 'calm'}]]`).join(' ');
+    const childButtons = user.children.map(c => `[[child:${c.name}:${c.personality || 'calm'}:${c.gender || 'boy'}]]`).join(' ');
     contextParts.push(`\n*** הוראה קריטית - בחירת ילד ***`);
     contextParts.push(`להורה הזה יש ${user.children.length} ילדים. בהודעה הראשונה בכל שיחה חדשה, או כשלא ברור על איזה ילד מדובר, חובה לשאול את ההורה על איזה ילד הוא/היא רוצה לדבר.`);
     contextParts.push(`את חייבת להציג את הכפתורים האלה בשורה נפרדת כדי שההורה יוכל לבחור:`);
@@ -260,6 +279,28 @@ async function streamOpenAI(res, messages) {
   return fullContent;
 }
 
+// Extract and save memories from AI response
+async function extractAndSaveMemories(userId, content) {
+  const regex = /\[\[memory:([^:\]]+):([^\]]+)\]\]/g;
+  let match;
+  while ((match = regex.exec(content)) !== null) {
+    const childName = match[1].trim();
+    const memoryContent = match[2].trim();
+    try {
+      await addMemory(userId, {
+        id: uuidv4(),
+        childName,
+        content: memoryContent,
+        category: 'observation',
+      });
+    } catch (e) {
+      console.error('Failed to save memory:', e);
+    }
+  }
+  // Return content without memory tags
+  return content.replace(/\s*\[\[memory:[^\]]+\]\]/g, '');
+}
+
 // ============================================================
 // Routes
 // ============================================================
@@ -296,6 +337,7 @@ router.post('/conversations', async (req, res) => {
       userId: user.id,
       title: title || 'שיחה חדשה',
       createdAt: new Date().toISOString(),
+      lastUsedAt: new Date(),
       messages: [],
       ...(user.isGuest ? { expiresAt: user.expiresAt } : {}),
     };
@@ -316,6 +358,9 @@ router.get('/conversations/:id/messages', async (req, res) => {
 
     const conversation = await getConversationById(req.params.id, user.id);
     if (!conversation) return res.status(404).json({ error: 'Conversation not found' });
+
+    // Reset 30-day inactivity timer
+    updateConversation(req.params.id, user.id, { lastUsedAt: new Date() }).catch(() => {});
 
     res.json(conversation.messages);
   } catch (error) {
@@ -346,7 +391,8 @@ router.post('/conversations/:id/messages', async (req, res) => {
     await pushMessage(conversation.id, user.id, userMessage);
 
     const systemPrompt = await getSystemPrompt();
-    const systemMessage = buildSystemMessage(systemPrompt, user);
+    const memories = await getMemories(user.id);
+    const systemMessage = buildSystemMessage(systemPrompt, user, memories);
     const assistantId = uuidv4();
     const assistantTimestamp = new Date().toISOString();
 
@@ -364,7 +410,10 @@ router.post('/conversations/:id/messages', async (req, res) => {
     const allMessages = [...conversation.messages, userMessage];
     const messages = await buildOpenAIMessages(systemMessage, allMessages);
 
-    const fullContent = await streamOpenAI(res, messages);
+    let fullContent = await streamOpenAI(res, messages);
+
+    // Extract and save memories from AI response
+    fullContent = await extractAndSaveMemories(user.id, fullContent);
 
     // Save assistant message
     const assistantMessage = {
@@ -401,7 +450,8 @@ router.post('/temp', async (req, res) => {
     if (!content) return res.status(400).json({ error: 'Message content is required' });
 
     const systemPrompt = await getSystemPrompt();
-    const systemMessage = user ? buildSystemMessage(systemPrompt, user) : systemPrompt;
+    const memories = user ? await getMemories(user.id) : [];
+    const systemMessage = user ? buildSystemMessage(systemPrompt, user, memories) : systemPrompt;
 
     const userMessage = {
       id: uuidv4(),

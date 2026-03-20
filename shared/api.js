@@ -28,6 +28,8 @@ export async function apiRequest(path, options = {}) {
 export const api = {
   // Auth
   login: (data) => apiRequest('/api/auth/login', { method: 'POST', body: JSON.stringify(data) }),
+  signup: (data) => apiRequest('/api/auth/signup', { method: 'POST', body: JSON.stringify(data) }),
+  googleLogin: (credential) => apiRequest('/api/auth/google', { method: 'POST', body: JSON.stringify({ credential }) }),
   register: (data) => apiRequest('/api/auth/register', { method: 'POST', body: JSON.stringify(data) }),
   getMe: () => apiRequest('/api/auth/me'),
   loginAsGuest: () => apiRequest('/api/auth/guest', { method: 'POST' }),

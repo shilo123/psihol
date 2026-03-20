@@ -40,20 +40,44 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  login: async ({ name, email }) => {
+  login: async ({ email, password }) => {
     set({ loading: true })
     try {
-      const data = await api.login({
-        email,
-        name,
-        picture: ''
-      })
+      const data = await api.login({ email, password })
       if (typeof localStorage !== 'undefined') localStorage.setItem('token', data.token)
       set({ token: data.token, user: data.user, isGuest: false, loading: false })
       return data.user
-    } catch {
+    } catch (err) {
       set({ loading: false })
-      toast.error('שגיאה בהתחברות. בדקו את הפרטים ונסו שוב.')
+      toast.error(err.message || 'אימייל או סיסמה שגויים')
+      return null
+    }
+  },
+
+  signup: async ({ name, email, password }) => {
+    set({ loading: true })
+    try {
+      const data = await api.signup({ name, email, password })
+      if (typeof localStorage !== 'undefined') localStorage.setItem('token', data.token)
+      set({ token: data.token, user: data.user, isGuest: false, loading: false })
+      return data.user
+    } catch (err) {
+      set({ loading: false })
+      toast.error(err.message || 'שגיאה בהרשמה. נסו שוב.')
+      return null
+    }
+  },
+
+  googleLogin: async (credential) => {
+    set({ loading: true })
+    try {
+      const data = await api.googleLogin(credential)
+      if (typeof localStorage !== 'undefined') localStorage.setItem('token', data.token)
+      set({ token: data.token, user: data.user, isGuest: false, loading: false })
+      return data.user
+    } catch (err) {
+      set({ loading: false })
+      toast.error(err.message || 'שגיאה בהתחברות דרך גוגל')
       return null
     }
   },

@@ -141,10 +141,13 @@ export default function SettingsPage() {
 
           {/* Right actions */}
           <div className="flex items-center gap-2">
-            {/* Notification bell */}
-            <button className="relative size-10 rounded-xl flex items-center justify-center text-text-muted hover:text-primary hover:bg-primary-light/60 transition-all">
-              <span className="material-symbols-outlined text-xl">notifications</span>
-              <span className="absolute top-1.5 left-1.5 size-2 bg-red-500 rounded-full ring-2 ring-white"></span>
+            {/* Back to chat */}
+            <button
+              onClick={() => navigate('/')}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-white font-semibold text-sm shadow-md shadow-primary/25 hover:shadow-lg hover:brightness-110 transition-all duration-200"
+            >
+              <span className="material-symbols-outlined text-lg" style={{ transform: 'scaleX(-1)' }}>arrow_back</span>
+              חזרה לצ׳אט
             </button>
 
             {/* Avatar */}

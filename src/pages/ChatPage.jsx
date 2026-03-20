@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '../../shared/authStore'
 import { useChatStore } from '../../shared/chatStore'
@@ -46,6 +46,8 @@ export default function ChatPage() {
   const isLoggedIn = !!token || isGuest
   const loading = useAuthStore((s) => s.loading)
   const login = useAuthStore((s) => s.login)
+  const signup = useAuthStore((s) => s.signup)
+  const googleLogin = useAuthStore((s) => s.googleLogin)
   const loginAsGuest = useAuthStore((s) => s.loginAsGuest)
   const logout = useAuthStore((s) => s.logout)
 
@@ -117,27 +119,69 @@ export default function ChatPage() {
   }, [inputText])
 
   /* ---- Login form state ---- */
-  const [loginName, setLoginName] = useState('')
+  const [authMode, setAuthMode] = useState('login') // 'login' | 'signup'
   const [loginEmail, setLoginEmail] = useState('')
+  const [loginPassword, setLoginPassword] = useState('')
+  const [signupName, setSignupName] = useState('')
+  const [signupEmail, setSignupEmail] = useState('')
+  const [signupPassword, setSignupPassword] = useState('')
+  const [signupConfirm, setSignupConfirm] = useState('')
+  const [authError, setAuthError] = useState('')
 
-  /* ---- Demo names ---- */
-  const DEMO_FIRST_NAMES = ['נועה', 'יוסי', 'מיכל', 'אורי', 'דנה', 'עומר', 'שירה', 'איתי', 'רונית', 'גיל', 'תמר', 'אלון', 'ליאת', 'עידו', 'הדס']
+  /* ---- Google Sign-In ---- */
+  const googleBtnRef = useRef(null)
+  const handleGoogleCallback = useCallback(async (response) => {
+    const u = await googleLogin(response.credential)
+    if (u && !(u.parentName && u.children?.length > 0 && u.challenges?.length > 0)) {
+      navigate('/onboarding')
+    }
+  }, [googleLogin, navigate])
+
+  useEffect(() => {
+    if (isLoggedIn || !googleBtnRef.current) return
+    const interval = setInterval(() => {
+      if (window.google?.accounts?.id) {
+        clearInterval(interval)
+        window.google.accounts.id.initialize({
+          client_id: '145489816493-r2vqfbp5jvla95msai28o5vp1q34naeh.apps.googleusercontent.com',
+          callback: handleGoogleCallback,
+        })
+        window.google.accounts.id.renderButton(googleBtnRef.current, {
+          theme: 'outline',
+          size: 'large',
+          width: googleBtnRef.current.offsetWidth,
+          text: 'continue_with',
+          locale: 'he',
+        })
+      }
+    }, 200)
+    return () => clearInterval(interval)
+  }, [isLoggedIn, handleGoogleCallback])
 
   /* ---- Handlers ---- */
   async function handleLogin(e) {
     e?.preventDefault()
-    if (!loginName.trim() || !loginEmail.trim()) return
-    const u = await login({ name: loginName.trim(), email: loginEmail.trim() })
+    setAuthError('')
+    if (!loginEmail.trim() || !loginPassword.trim()) return
+    const u = await login({ email: loginEmail.trim(), password: loginPassword.trim() })
     if (u && !(u.parentName && u.children?.length > 0 && u.challenges?.length > 0)) {
       navigate('/onboarding')
     }
   }
 
-  async function handleDemoLogin() {
-    const name = DEMO_FIRST_NAMES[Math.floor(Math.random() * DEMO_FIRST_NAMES.length)]
-    const id = Math.floor(Math.random() * 9000) + 1000
-    const email = `demo-${id}@psihologit.app`
-    const u = await login({ name, email })
+  async function handleSignup(e) {
+    e?.preventDefault()
+    setAuthError('')
+    if (!signupName.trim() || !signupEmail.trim() || !signupPassword) return
+    if (signupPassword.length < 6) {
+      setAuthError('הסיסמה חייבת להכיל לפחות 6 תווים')
+      return
+    }
+    if (signupPassword !== signupConfirm) {
+      setAuthError('הסיסמאות לא תואמות')
+      return
+    }
+    const u = await signup({ name: signupName.trim(), email: signupEmail.trim(), password: signupPassword })
     if (u) navigate('/onboarding')
   }
 
@@ -197,63 +241,160 @@ export default function ChatPage() {
   if (!isLoggedIn) {
     return (
       <div dir="rtl" className="h-screen flex flex-col overflow-hidden bg-background-light">
-        {/* Full-screen overlay */}
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-primary/20 via-purple-500/10 to-pink-500/10 backdrop-blur-md">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-primary/20 via-purple-500/10 to-pink-500/10 backdrop-blur-md overflow-y-auto py-8">
           {/* Decorative blobs */}
           <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
           <div className="absolute bottom-1/4 left-1/4 w-80 h-80 bg-purple-400/10 rounded-full blur-3xl" />
 
           {/* Glass card */}
           <div className="relative z-10 w-full max-w-md mx-4 bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-8 text-center border border-white/50">
-            {/* Logo card – rotated */}
-            <div className="mx-auto mb-6 w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-xl shadow-primary/30 transform rotate-3">
+            {/* Logo */}
+            <div className="mx-auto mb-4 w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-xl shadow-primary/30 transform rotate-3">
               <span className="material-symbols-outlined text-white text-4xl">psychology</span>
             </div>
-
-            <h1 className="text-3xl font-extrabold text-text-main mb-2">פסיכולוגית בכיס</h1>
-            <p className="text-text-secondary mb-8 leading-relaxed">
-              העוזרת החכמה להורים ישראליים.<br />
-              קבלו הכוונה מקצועית מבוססת AI, בכל רגע.
+            <h1 className="text-3xl font-extrabold text-text-main mb-1">פסיכולוגית בכיס</h1>
+            <p className="text-text-secondary mb-6 leading-relaxed text-sm">
+              העוזרת החכמה להורים ישראליים. הכוונה מקצועית מבוססת AI.
             </p>
 
-            {/* Simple login form */}
-            <form onSubmit={handleLogin} className="space-y-3 text-right">
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1">שם</label>
-                <input
-                  type="text"
-                  value={loginName}
-                  onChange={(e) => setLoginName(e.target.value)}
-                  placeholder="השם שלך"
-                  className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-right"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1">אימייל</label>
-                <input
-                  type="email"
-                  value={loginEmail}
-                  onChange={(e) => setLoginEmail(e.target.value)}
-                  placeholder="your@email.com"
-                  dir="ltr"
-                  className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-left"
-                  required
-                />
-              </div>
+            {/* Google Sign-In */}
+            <div ref={googleBtnRef} className="w-full mb-4 flex justify-center" />
+
+            {/* Divider */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-1 h-px bg-gray-200" />
+              <span className="text-xs text-text-secondary">או</span>
+              <div className="flex-1 h-px bg-gray-200" />
+            </div>
+
+            {/* Auth mode toggle */}
+            <div className="flex bg-gray-100 rounded-xl p-1 mb-4">
               <button
-                type="submit"
-                disabled={loading}
-                className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-l from-primary to-purple-600 rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 text-white font-semibold disabled:opacity-50"
+                onClick={() => { setAuthMode('login'); setAuthError('') }}
+                className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${authMode === 'login' ? 'bg-white shadow text-primary' : 'text-text-muted'}`}
               >
-                {loading ? (
-                  <span className="material-symbols-outlined animate-spin text-lg">progress_activity</span>
-                ) : (
-                  <span className="material-symbols-outlined text-lg">login</span>
-                )}
-                <span>{loading ? 'מתחבר...' : 'כניסה'}</span>
+                כניסה
               </button>
-            </form>
+              <button
+                onClick={() => { setAuthMode('signup'); setAuthError('') }}
+                className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${authMode === 'signup' ? 'bg-white shadow text-primary' : 'text-text-muted'}`}
+              >
+                הרשמה
+              </button>
+            </div>
+
+            {/* Error message */}
+            {authError && (
+              <div className="mb-3 p-2.5 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 text-right">
+                {authError}
+              </div>
+            )}
+
+            {authMode === 'login' ? (
+              /* ---- LOGIN FORM ---- */
+              <form onSubmit={handleLogin} className="space-y-3 text-right">
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary mb-1">אימייל</label>
+                  <input
+                    type="email"
+                    value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    dir="ltr"
+                    className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 outline-none transition-all text-left"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary mb-1">סיסמה</label>
+                  <input
+                    type="password"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    placeholder="••••••"
+                    dir="ltr"
+                    className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 outline-none transition-all text-left"
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-l from-primary to-purple-600 rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 text-white font-semibold disabled:opacity-50"
+                >
+                  {loading ? (
+                    <span className="material-symbols-outlined animate-spin text-lg">progress_activity</span>
+                  ) : (
+                    <span className="material-symbols-outlined text-lg">login</span>
+                  )}
+                  <span>{loading ? 'מתחבר...' : 'כניסה'}</span>
+                </button>
+              </form>
+            ) : (
+              /* ---- SIGNUP FORM ---- */
+              <form onSubmit={handleSignup} className="space-y-3 text-right">
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary mb-1">שם מלא</label>
+                  <input
+                    type="text"
+                    value={signupName}
+                    onChange={(e) => setSignupName(e.target.value)}
+                    placeholder="השם שלך"
+                    className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 outline-none transition-all text-right"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary mb-1">אימייל</label>
+                  <input
+                    type="email"
+                    value={signupEmail}
+                    onChange={(e) => setSignupEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    dir="ltr"
+                    className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 outline-none transition-all text-left"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary mb-1">סיסמה</label>
+                  <input
+                    type="password"
+                    value={signupPassword}
+                    onChange={(e) => setSignupPassword(e.target.value)}
+                    placeholder="לפחות 6 תווים"
+                    dir="ltr"
+                    className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 outline-none transition-all text-left"
+                    required
+                    minLength={6}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary mb-1">אימות סיסמה</label>
+                  <input
+                    type="password"
+                    value={signupConfirm}
+                    onChange={(e) => setSignupConfirm(e.target.value)}
+                    placeholder="הקלידו שוב את הסיסמה"
+                    dir="ltr"
+                    className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 outline-none transition-all text-left"
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-l from-primary to-purple-600 rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 text-white font-semibold disabled:opacity-50"
+                >
+                  {loading ? (
+                    <span className="material-symbols-outlined animate-spin text-lg">progress_activity</span>
+                  ) : (
+                    <span className="material-symbols-outlined text-lg">person_add</span>
+                  )}
+                  <span>{loading ? 'נרשם...' : 'הרשמה'}</span>
+                </button>
+              </form>
+            )}
 
             {/* Divider */}
             <div className="flex items-center gap-3 my-4">
@@ -262,16 +403,6 @@ export default function ChatPage() {
               <div className="flex-1 h-px bg-gray-200" />
             </div>
 
-            {/* Demo user button */}
-            <button
-              onClick={handleDemoLogin}
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-l from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 text-white font-semibold disabled:opacity-50"
-            >
-              <span className="material-symbols-outlined text-lg">science</span>
-              <span>כניסת משתמש דמו</span>
-            </button>
-
             {/* Guest button */}
             <button
               onClick={async () => {
@@ -279,14 +410,14 @@ export default function ChatPage() {
                 if (u) navigate('/onboarding')
               }}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gray-100 hover:bg-gray-200 rounded-2xl transition-all duration-200 text-text-secondary font-medium mt-2 disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gray-100 hover:bg-gray-200 rounded-2xl transition-all duration-200 text-text-secondary font-medium disabled:opacity-50"
             >
               <span className="material-symbols-outlined text-lg">person_outline</span>
               <span>כניסה כאורח (3 ימים)</span>
             </button>
 
             {/* Terms */}
-            <p className="mt-6 text-xs text-text-secondary/70 leading-relaxed">
+            <p className="mt-5 text-xs text-text-secondary/70 leading-relaxed">
               בכניסה, את/ה מסכים/ה ל
               <a href="#" className="text-primary hover:underline mx-1">תנאי השימוש</a>
               ול
@@ -538,15 +669,16 @@ export default function ChatPage() {
         </main>
 
         {/* -------------------------------------------------------- */}
-        {/*  SIDEBAR (second in DOM = LEFT in RTL)                     */}
+        {/*  SIDEBAR (second in DOM = LEFT in RTL → fixed RIGHT)       */}
         {/* -------------------------------------------------------- */}
         <aside
           className={`
-            fixed top-0 left-0 h-full w-80 bg-white dark:bg-surface-dark border-r border-gray-100 dark:border-gray-800 z-40 flex flex-col
+            fixed top-0 right-0 h-full w-80 bg-white dark:bg-surface-dark border-l border-gray-100 dark:border-gray-800 z-40 flex flex-col
             transform transition-transform duration-300 ease-in-out
-            md:relative md:translate-x-0 md:flex md:shrink-0 md:z-auto md:w-80
-            ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-            ${sidebarOpen ? '' : 'hidden md:flex'}
+            md:relative md:translate-x-0 md:flex md:shrink-0 md:z-auto md:w-80 md:order-first
+            ${sidebarOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
+            ${sidebarOpen ? '' : 'pointer-events-none md:pointer-events-auto'}
+            md:flex
           `}
         >
           {/* Sidebar header: Logo + New chat */}
@@ -714,35 +846,59 @@ export default function ChatPage() {
         .child-select-btn:active {
           transform: scale(0.93);
         }
-        .child-btn-icon {
-          font-size: 20px !important;
-          pointer-events: none;
-        }
-        .child-sensitive {
-          background: linear-gradient(135deg, #ec4899 0%, #f472b6 50%, #db2777 100%);
+        /* ---- Girl variants: softer/warmer hues ---- */
+        .child-sensitive-girl {
+          background: linear-gradient(135deg, #ec4899 0%, #f9a8d4 50%, #db2777 100%);
           box-shadow: 0 4px 15px rgba(236, 72, 153, 0.35);
         }
-        .child-sensitive:hover { box-shadow: 0 8px 25px rgba(236, 72, 153, 0.45); }
-        .child-stubborn {
+        .child-sensitive-girl:hover { box-shadow: 0 8px 25px rgba(236, 72, 153, 0.45); }
+        .child-stubborn-girl {
+          background: linear-gradient(135deg, #f472b6 0%, #fb923c 50%, #e11d48 100%);
+          box-shadow: 0 4px 15px rgba(244, 114, 182, 0.35);
+        }
+        .child-stubborn-girl:hover { box-shadow: 0 8px 25px rgba(244, 114, 182, 0.45); }
+        .child-anxious-girl {
+          background: linear-gradient(135deg, #a78bfa 0%, #c4b5fd 50%, #7c3aed 100%);
+          box-shadow: 0 4px 15px rgba(167, 139, 250, 0.35);
+        }
+        .child-anxious-girl:hover { box-shadow: 0 8px 25px rgba(167, 139, 250, 0.45); }
+        .child-energetic-girl {
+          background: linear-gradient(135deg, #34d399 0%, #a7f3d0 50%, #059669 100%);
+          box-shadow: 0 4px 15px rgba(52, 211, 153, 0.35);
+        }
+        .child-energetic-girl:hover { box-shadow: 0 8px 25px rgba(52, 211, 153, 0.45); }
+        .child-calm-girl {
+          background: linear-gradient(135deg, #67e8f9 0%, #a5f3fc 50%, #06b6d4 100%);
+          box-shadow: 0 4px 15px rgba(103, 232, 249, 0.35);
+        }
+        .child-calm-girl:hover { box-shadow: 0 8px 25px rgba(103, 232, 249, 0.45); }
+
+        /* ---- Boy variants: deeper/cooler hues ---- */
+        .child-sensitive-boy {
+          background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 50%, #1d4ed8 100%);
+          box-shadow: 0 4px 15px rgba(59, 130, 246, 0.35);
+        }
+        .child-sensitive-boy:hover { box-shadow: 0 8px 25px rgba(59, 130, 246, 0.45); }
+        .child-stubborn-boy {
           background: linear-gradient(135deg, #f59e0b 0%, #f97316 50%, #ea580c 100%);
           box-shadow: 0 4px 15px rgba(245, 158, 11, 0.35);
         }
-        .child-stubborn:hover { box-shadow: 0 8px 25px rgba(245, 158, 11, 0.45); }
-        .child-anxious {
+        .child-stubborn-boy:hover { box-shadow: 0 8px 25px rgba(245, 158, 11, 0.45); }
+        .child-anxious-boy {
           background: linear-gradient(135deg, #6366f1 0%, #818cf8 50%, #4f46e5 100%);
           box-shadow: 0 4px 15px rgba(99, 102, 241, 0.35);
         }
-        .child-anxious:hover { box-shadow: 0 8px 25px rgba(99, 102, 241, 0.45); }
-        .child-energetic {
-          background: linear-gradient(135deg, #10b981 0%, #34d399 50%, #059669 100%);
+        .child-anxious-boy:hover { box-shadow: 0 8px 25px rgba(99, 102, 241, 0.45); }
+        .child-energetic-boy {
+          background: linear-gradient(135deg, #10b981 0%, #34d399 50%, #047857 100%);
           box-shadow: 0 4px 15px rgba(16, 185, 129, 0.35);
         }
-        .child-energetic:hover { box-shadow: 0 8px 25px rgba(16, 185, 129, 0.45); }
-        .child-calm {
-          background: linear-gradient(135deg, #06b6d4 0%, #22d3ee 50%, #0891b2 100%);
-          box-shadow: 0 4px 15px rgba(6, 182, 212, 0.35);
+        .child-energetic-boy:hover { box-shadow: 0 8px 25px rgba(16, 185, 129, 0.45); }
+        .child-calm-boy {
+          background: linear-gradient(135deg, #0284c7 0%, #38bdf8 50%, #0369a1 100%);
+          box-shadow: 0 4px 15px rgba(2, 132, 199, 0.35);
         }
-        .child-calm:hover { box-shadow: 0 8px 25px rgba(6, 182, 212, 0.45); }
+        .child-calm-boy:hover { box-shadow: 0 8px 25px rgba(2, 132, 199, 0.45); }
       `}</style>
     </div>
   )

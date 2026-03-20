@@ -52,18 +52,18 @@ export function renderMarkdown(text) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    // Child selector buttons: [[child:name:personality]]
-    .replace(/\[\[child:([^:\]]+):?([^\]]*)\]\]/g, (_, name, personality) => {
+    // Child selector buttons: [[child:name:personality:gender]]
+    .replace(/\[\[child:([^:\]]+):?([^:\]]*):?([^\]]*)\]\]/g, (_, name, personality, gender) => {
       const p = (personality || 'calm').trim()
-      const icons = { sensitive: 'favorite', stubborn: 'flash_on', anxious: 'sentiment_neutral', energetic: 'bolt', calm: 'spa' }
-      const icon = icons[p] || 'child_care'
-      return `<button class="child-select-btn child-${p}" data-child="${name}"><span class="material-symbols-outlined child-btn-icon">${icon}</span>${name}</button>`
+      const g = (gender || 'boy').trim()
+      return `<button class="child-select-btn child-${p}-${g}" data-child="${name}">${name}</button>`
     })
     .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-text-main">$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
     .replace(/^[-•]\s+(.+)$/gm, '<li class="flex items-start gap-2"><span class="text-primary mt-1.5 text-xs">●</span><span>$1</span></li>')
     .replace(/^(\d+)\.\s+(.+)$/gm, '<li class="flex items-start gap-3"><span class="flex-shrink-0 size-6 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-xs font-bold text-primary">$1</span><span>$2</span></li>')
     .replace(/((?:<li.*?<\/li>\n?)+)/g, '<ul class="space-y-2 my-3 list-none p-0">$1</ul>')
+    .replace(/\s*\[\[memory:[^\]]+\]\]/g, '')
     .replace(/\n\n/g, '</p><p class="mt-3">')
     .replace(/\n/g, '<br>')
 }
