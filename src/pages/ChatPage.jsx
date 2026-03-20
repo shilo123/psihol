@@ -359,7 +359,7 @@ export default function ChatPage() {
                 </div>
 
                 {/* Welcome card */}
-                <div className="relative bg-white dark:bg-surface-dark rounded-2xl shadow-lg w-full overflow-hidden mb-8">
+                <div className="relative bg-white dark:bg-surface-dark rounded-2xl shadow-lg w-full overflow-hidden mb-8 slide-in-right">
                   {/* Rainbow bar */}
                   <div className="h-1 bg-gradient-to-r from-primary via-purple-500 to-pink-500" />
                   <div className="p-6 text-center">
@@ -395,7 +395,7 @@ export default function ChatPage() {
                           </div>
                         ) : (
                           /* AI card */
-                          <div className="relative bg-white dark:bg-surface-dark rounded-2xl shadow-md overflow-hidden">
+                          <div className="relative bg-white dark:bg-surface-dark rounded-2xl shadow-md overflow-hidden slide-in-right">
                             {/* Rainbow top bar */}
                             <div className="h-1 bg-gradient-to-r from-primary via-purple-500 to-pink-500" />
                             <div className="p-4 md:p-5">
@@ -461,7 +461,7 @@ export default function ChatPage() {
                       <span className="material-symbols-outlined text-white text-base">psychology</span>
                     </div>
                     <div className="max-w-[85%]">
-                      <div className="relative bg-white dark:bg-surface-dark rounded-2xl shadow-md overflow-hidden">
+                      <div className="relative bg-white dark:bg-surface-dark rounded-2xl shadow-md overflow-hidden slide-in-right">
                         <div className="h-1 bg-gradient-to-r from-primary via-purple-500 to-pink-500" />
                         <div className="p-4 md:p-5">
                           {streamingContent ? (
@@ -669,6 +669,13 @@ export default function ChatPage() {
 
       {/* ---- Inline styles for typing animation ---- */}
       <style>{`
+        @keyframes slideInRight {
+          0% { opacity: 0; transform: translateX(40px); }
+          100% { opacity: 1; transform: translateX(0); }
+        }
+        .slide-in-right {
+          animation: slideInRight 0.5s ease-out forwards;
+        }
         @keyframes typingBounce {
           0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
           30% { transform: translateY(-6px); opacity: 1; }
