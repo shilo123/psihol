@@ -264,6 +264,7 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState('users')
   const [selectedUserId, setSelectedUserId] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState(null) // { id, name }
   const [temperature, setTemperature] = useState(0.7)
   const [savedTemperature, setSavedTemperature] = useState(0.7)
   const [testMessage, setTestMessage] = useState('')
@@ -564,6 +565,15 @@ export default function AdminPage() {
                         {user.createdAt ? new Date(user.createdAt).toLocaleDateString('he-IL') : '-'}
                       </span>
 
+                      {/* Delete */}
+                      <button
+                        onClick={e => { e.stopPropagation(); setDeleteTarget({ id: user.id, name: user.name || user.email }) }}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
+                        title="מחיקה"
+                      >
+                        <span className="material-symbols-outlined text-lg">delete</span>
+                      </button>
+
                       {/* Arrow */}
                       <span className="material-symbols-outlined text-gray-300 group-hover:text-primary transition-colors">chevron_left</span>
                     </div>
@@ -740,6 +750,47 @@ export default function AdminPage() {
           </div>
         </>)}
       </main>
+
+      {/* Delete Confirmation Popup (from list) */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4" onClick={() => setDeleteTarget(null)}>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-center mb-4">
+              <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center">
+                <span className="material-symbols-outlined text-red-600 text-3xl">warning</span>
+              </div>
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 text-center mb-2">מחיקת משתמש</h3>
+            <p className="text-sm text-gray-500 text-center mb-6">
+              למחוק את <strong>{deleteTarget.name}</strong> וכל הנתונים שלו? (שיחות, זכרונות)
+              <br />
+              <span className="text-red-500 font-medium">פעולה זו בלתי הפיכה.</span>
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="flex-1 h-11 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
+              >
+                ביטול
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    await api.deleteUser(deleteTarget.id)
+                    handleUserDeleted(deleteTarget.id)
+                  } catch { /* */ }
+                  setDeleteTarget(null)
+                }}
+                className="flex-1 h-11 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <span className="material-symbols-outlined text-lg">delete_forever</span>
+                מחק
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* User Detail Popup */}
       {selectedUserId && (
