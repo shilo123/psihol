@@ -267,8 +267,9 @@ export default function AdminPage() {
   const [deleteTarget, setDeleteTarget] = useState(null) // { id, name }
   const [temperature, setTemperature] = useState(0.7)
   const [savedTemperature, setSavedTemperature] = useState(0.7)
-  const [testMessage, setTestMessage] = useState('')
-  const [testResponse, setTestResponse] = useState('')
+  const [testInput, setTestInput] = useState('')
+  const [testMessages, setTestMessages] = useState([]) // [{ role, content }]
+  const [testStreaming, setTestStreaming] = useState('')
   const [testLoading, setTestLoading] = useState(false)
 
   useEffect(() => {
@@ -331,11 +332,15 @@ export default function AdminPage() {
   }
 
   async function runTest() {
-    if (!testMessage.trim() || testLoading) return
+    if (!testInput.trim() || testLoading) return
+    const userMsg = { role: 'user', content: testInput.trim() }
+    const history = [...testMessages, userMsg]
+    setTestMessages(history)
+    setTestInput('')
     setTestLoading(true)
-    setTestResponse('')
+    setTestStreaming('')
     try {
-      const body = await api.sendTempMessageStream(testMessage, [])
+      const body = await api.sendTempMessageStream(userMsg.content, testMessages)
       const reader = body.getReader()
       const decoder = new TextDecoder()
       let result = ''
@@ -349,17 +354,18 @@ export default function AdminPage() {
           if (data === '[DONE]') continue
           try {
             const parsed = JSON.parse(data)
-            const delta = parsed.choices?.[0]?.delta?.content
-            if (delta) {
-              result += delta
-              setTestResponse(result)
+            if (parsed.type === 'chunk' && parsed.content) {
+              result += parsed.content
+              setTestStreaming(result)
             }
           } catch { /* skip */ }
         }
       }
-      if (!result) setTestResponse('(תשובה ריקה)')
+      setTestMessages(prev => [...prev, { role: 'assistant', content: result || '(תשובה ריקה)' }])
+      setTestStreaming('')
     } catch (err) {
-      setTestResponse('שגיאה: ' + err.message)
+      setTestMessages(prev => [...prev, { role: 'assistant', content: 'שגיאה: ' + err.message }])
+      setTestStreaming('')
     }
     setTestLoading(false)
   }
@@ -386,6 +392,7 @@ export default function AdminPage() {
   const tabs = [
     { id: 'users', label: 'משתמשים', icon: 'group', count: users.length },
     { id: 'settings', label: 'הגדרות', icon: 'settings' },
+    { id: 'test', label: 'ניסיון צ\'אט', icon: 'science' },
   ]
 
   return (
@@ -694,61 +701,109 @@ export default function AdminPage() {
             </div>
           </div>
 
-          {/* Chat Test Card */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="p-6 md:p-8">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center">
-                  <span className="material-symbols-outlined text-green-600">science</span>
+        </>)}
+
+        {/* ======= TEST CHAT TAB ======= */}
+        {activeTab === 'test' && (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 300px)', minHeight: '400px' }}>
+            {/* Header */}
+            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                  <span className="material-symbols-outlined text-primary">smart_toy</span>
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-gray-900">ניסיון צ'אט</h2>
-                  <p className="text-sm text-gray-500">בדוק את הנחיות המערכת והטמפרטורה הנוכחיים</p>
+                  <h2 className="text-sm font-bold text-gray-900">ניסיון צ'אט</h2>
+                  <p className="text-xs text-gray-500">בדיקת הנחיות המערכת והטמפרטורה</p>
                 </div>
               </div>
+              {testMessages.length > 0 && (
+                <button
+                  onClick={() => { setTestMessages([]); setTestStreaming('') }}
+                  className="text-xs text-gray-400 hover:text-red-500 flex items-center gap-1 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-sm">delete_sweep</span>
+                  נקה שיחה
+                </button>
+              )}
+            </div>
 
-              <div className="space-y-4">
-                <div className="flex gap-3">
-                  <input
-                    type="text"
-                    value={testMessage}
-                    onChange={e => setTestMessage(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter' && testMessage.trim() && !testLoading) {
-                        e.preventDefault()
-                        runTest()
-                      }
-                    }}
-                    placeholder="כתוב הודעה לניסיון..."
-                    className="flex-1 h-12 px-4 rounded-xl border-2 border-gray-200 bg-gray-50 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-                  />
-                  <button
-                    onClick={runTest}
-                    disabled={!testMessage.trim() || testLoading}
-                    className="h-12 px-6 bg-green-600 text-white font-bold rounded-xl flex items-center gap-2 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {testLoading ? (
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <span className="material-symbols-outlined text-lg">send</span>
-                    )}
-                    שלח
-                  </button>
+            {/* Messages area */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {testMessages.length === 0 && !testStreaming && (
+                <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                  <span className="material-symbols-outlined text-5xl mb-3 text-primary/30">forum</span>
+                  <p className="text-sm font-medium">שלח הודעה כדי לבדוק את הבוט</p>
+                  <p className="text-xs mt-1">ההודעות לא נשמרות</p>
                 </div>
+              )}
 
-                {testResponse && (
-                  <div className="p-4 bg-green-50/50 border border-green-100 rounded-xl">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="material-symbols-outlined text-green-600 text-lg">smart_toy</span>
-                      <span className="text-sm font-bold text-green-700">תשובת הבוט:</span>
-                    </div>
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{testResponse}</p>
+              {testMessages.map((msg, i) => (
+                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-start' : 'justify-end'}`}>
+                  <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                    msg.role === 'user'
+                      ? 'bg-primary text-white rounded-tr-md'
+                      : 'bg-gray-100 text-gray-800 rounded-tl-md'
+                  }`}>
+                    <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
                   </div>
-                )}
+                </div>
+              ))}
+
+              {/* Streaming response */}
+              {testStreaming && (
+                <div className="flex justify-end">
+                  <div className="max-w-[80%] rounded-2xl rounded-tl-md px-4 py-3 bg-gray-100 text-gray-800">
+                    <p className="text-sm whitespace-pre-wrap leading-relaxed">{testStreaming}<span className="inline-block w-1.5 h-4 bg-primary/60 animate-pulse mr-0.5 rounded-sm" /></p>
+                  </div>
+                </div>
+              )}
+
+              {/* Loading indicator */}
+              {testLoading && !testStreaming && (
+                <div className="flex justify-end">
+                  <div className="rounded-2xl rounded-tl-md px-4 py-3 bg-gray-100">
+                    <div className="flex gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <div className="w-2 h-2 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <div className="w-2 h-2 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Input bar */}
+            <div className="p-4 border-t border-gray-100 bg-gray-50/50">
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  value={testInput}
+                  onChange={e => setTestInput(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && testInput.trim() && !testLoading) {
+                      e.preventDefault()
+                      runTest()
+                    }
+                  }}
+                  placeholder="כתוב הודעה..."
+                  className="flex-1 h-12 px-4 rounded-2xl border-2 border-gray-200 bg-white text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                />
+                <button
+                  onClick={runTest}
+                  disabled={!testInput.trim() || testLoading}
+                  className="h-12 w-12 bg-primary text-white rounded-2xl flex items-center justify-center hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-lg shadow-primary/25"
+                >
+                  {testLoading ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <span className="material-symbols-outlined text-xl rotate-180">send</span>
+                  )}
+                </button>
               </div>
             </div>
           </div>
-        </>)}
+        )}
       </main>
 
       {/* Delete Confirmation Popup (from list) */}
