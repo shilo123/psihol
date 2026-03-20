@@ -18,6 +18,7 @@ function UserDetailPopup({ userId, onClose, onDelete, onSave }) {
   const [editName, setEditName] = useState('')
   const [editEmail, setEditEmail] = useState('')
   const [saving, setSaving] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   useEffect(() => {
     api.getUserDetails(userId).then(data => {
@@ -39,8 +40,7 @@ function UserDetailPopup({ userId, onClose, onDelete, onSave }) {
     setSaving(false)
   }
 
-  async function handleDelete() {
-    if (!confirm('למחוק את המשתמש וכל הנתונים שלו? פעולה זו בלתי הפיכה.')) return
+  async function doDelete() {
     try {
       await api.deleteUser(userId)
       onDelete(userId)
@@ -202,7 +202,7 @@ function UserDetailPopup({ userId, onClose, onDelete, onSave }) {
                     <span className="material-symbols-outlined text-lg">edit</span>
                     עריכה
                   </button>
-                  <button onClick={handleDelete}
+                  <button onClick={() => setShowDeleteConfirm(true)}
                     className="h-11 px-5 bg-red-50 text-red-600 font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-red-100 transition-colors">
                     <span className="material-symbols-outlined text-lg">delete</span>
                     מחיקה
@@ -211,6 +211,41 @@ function UserDetailPopup({ userId, onClose, onDelete, onSave }) {
               )}
             </div>
           </>
+        )}
+
+        {/* Delete Confirmation Popup */}
+        {showDeleteConfirm && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center p-6" onClick={() => setShowDeleteConfirm(false)}>
+            <div className="absolute inset-0 bg-black/30 rounded-3xl" />
+            <div className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+              <div className="flex justify-center mb-4">
+                <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-red-600 text-3xl">warning</span>
+                </div>
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 text-center mb-2">מחיקת משתמש</h3>
+              <p className="text-sm text-gray-500 text-center mb-6">
+                למחוק את <strong>{user?.parentName || user?.name}</strong> וכל הנתונים שלו? (שיחות, זכרונות)
+                <br />
+                <span className="text-red-500 font-medium">פעולה זו בלתי הפיכה.</span>
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 h-11 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
+                >
+                  ביטול
+                </button>
+                <button
+                  onClick={doDelete}
+                  className="flex-1 h-11 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-lg">delete_forever</span>
+                  מחק
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
