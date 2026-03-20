@@ -100,5 +100,10 @@ export const api = {
   getSystemPrompt: () => apiRequest('/api/admin/system-prompt'),
   updateSystemPrompt: (prompt) => apiRequest('/api/admin/system-prompt', { method: 'PUT', body: JSON.stringify({ prompt }) }),
   getUsers: () => apiRequest('/api/admin/users'),
+  getUserDetails: (id) => apiRequest(`/api/admin/users/${id}`),
+  updateUserAdmin: (id, data) => apiRequest(`/api/admin/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteUser: (id) => apiRequest(`/api/admin/users/${id}`, { method: 'DELETE' }),
+  getTemperature: () => apiRequest('/api/admin/settings/temperature'),
+  updateTemperature: (temperature) => apiRequest('/api/admin/settings/temperature', { method: 'PUT', body: JSON.stringify({ temperature }) }),
   getStats: () => apiRequest('/api/admin/stats'),
 }

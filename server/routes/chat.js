@@ -13,6 +13,7 @@ import {
   trackTokenUsage,
   getMemories,
   addMemory,
+  getSetting,
 } from '../db.js';
 
 const router = Router();
@@ -218,7 +219,7 @@ async function streamOpenAI(res, messages) {
         body: JSON.stringify({
           model: 'gpt-4.1',
           messages,
-          temperature: 0.7,
+          temperature: parseFloat(await getSetting('chatTemperature')) || 0.7,
           max_tokens: 1500,
           stream: true,
           stream_options: { include_usage: true },
