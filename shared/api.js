@@ -107,4 +107,6 @@ export const api = {
   getTemperature: () => apiRequest('/api/admin/settings/temperature'),
   updateTemperature: (temperature) => apiRequest('/api/admin/settings/temperature', { method: 'PUT', body: JSON.stringify({ temperature }) }),
   getStats: () => apiRequest('/api/admin/stats'),
+  getLowConfidenceQuestions: () => apiRequest('/api/admin/low-confidence'),
+  deleteLowConfidenceQuestion: (id) => apiRequest(`/api/admin/low-confidence/${id}`, { method: 'DELETE' }),
 }

@@ -56,7 +56,9 @@ export function renderMarkdown(text) {
     .replace(/\[\[child:([^:\]]+):?([^:\]]*):?([^\]]*)\]\]/g, (_, name, personality, gender) => {
       const p = (personality || 'calm').trim()
       const g = (gender || 'boy').trim()
-      return `<button class="child-select-btn child-${p}-${g}" data-child="${name}">${name}</button>`
+      const personalityLabels = { sensitive: 'רגיש/ה', stubborn: 'עקשן/ית', anxious: 'חרדתי/ת', energetic: 'אנרגטי/ת', calm: 'רגוע/ה' }
+      const pLabel = personalityLabels[p] || p
+      return `<button class="child-select-btn child-${p}-${g}" data-child="${name}"><span class="child-btn-name">${name}</span><span class="child-btn-personality">${pLabel}</span></button>`
     })
     .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-text-main">$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
@@ -64,6 +66,7 @@ export function renderMarkdown(text) {
     .replace(/^(\d+)\.\s+(.+)$/gm, '<li class="flex items-start gap-3"><span class="flex-shrink-0 size-6 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-xs font-bold text-primary">$1</span><span>$2</span></li>')
     .replace(/((?:<li.*?<\/li>\n?)+)/g, '<ul class="space-y-2 my-3 list-none p-0">$1</ul>')
     .replace(/\s*\[\[memory:[^\]]+\]\]/g, '')
+    .replace(/\s*\[\[confidence:\d+\]\]/g, '')
     .replace(/\n\n/g, '</p><p class="mt-3">')
     .replace(/\n/g, '<br>')
 }

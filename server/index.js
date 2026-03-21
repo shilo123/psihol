@@ -7,6 +7,7 @@ import authRoutes from './routes/auth.js';
 import chatRoutes from './routes/chat.js';
 import userRoutes from './routes/user.js';
 import adminRoutes from './routes/admin.js';
+import { getUserFromToken } from './db.js';
 
 // Load .env from project root (not server/)
 const __filename = fileURLToPath(import.meta.url);
@@ -18,16 +19,27 @@ const PORT = 3001;
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:8080', 'http://localhost:5173'],
+  origin: ['http://localhost:8080', 'http://localhost:5173', 'https://psihologit.vercel.app'],
   credentials: true
 }));
 app.use(express.json());
+
+// Admin auth middleware
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean);
+
+async function requireAdmin(req, res, next) {
+  const user = await getUserFromToken(req);
+  if (!user || !ADMIN_EMAILS.includes(user.email)) {
+    return res.status(403).json({ error: 'אין הרשאת מנהל' });
+  }
+  next();
+}
 
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/user', userRoutes);
-app.use('/api/admin', adminRoutes);
+app.use('/api/admin', requireAdmin, adminRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

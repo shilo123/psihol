@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getAllUsers, countConversations, getSystemPrompt, setSystemPrompt, getTokenUsageStats, findUserById, updateUser, getMemories, getDb, getSetting, setSetting } from '../db.js';
+import { getAllUsers, countConversations, getSystemPrompt, setSystemPrompt, getTokenUsageStats, findUserById, updateUser, getMemories, getDb, getSetting, setSetting, getLowConfidenceQuestions, deleteLowConfidenceQuestion } from '../db.js';
 
 const router = Router();
 
@@ -139,6 +139,29 @@ router.get('/stats', async (req, res) => {
       tokens: tokenStats,
     });
   } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /low-confidence - Get questions where AI wasn't confident
+router.get('/low-confidence', async (req, res) => {
+  try {
+    const questions = await getLowConfidenceQuestions();
+    res.json(questions);
+  } catch (error) {
+    console.error('Get low-confidence questions error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// DELETE /low-confidence/:id
+router.delete('/low-confidence/:id', async (req, res) => {
+  try {
+    const deleted = await deleteLowConfidenceQuestion(req.params.id);
+    if (!deleted) return res.status(404).json({ error: 'Not found' });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete low-confidence question error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

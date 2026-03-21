@@ -271,6 +271,8 @@ export default function AdminPage() {
   const [testMessages, setTestMessages] = useState([]) // [{ role, content }]
   const [testStreaming, setTestStreaming] = useState('')
   const [testLoading, setTestLoading] = useState(false)
+  const [lowConfQuestions, setLowConfQuestions] = useState([])
+  const [lowConfLoading, setLowConfLoading] = useState(false)
 
   useEffect(() => {
     async function fetchData() {
@@ -305,6 +307,16 @@ export default function AdminPage() {
       return () => clearTimeout(timer)
     }
   }, [feedback])
+
+  useEffect(() => {
+    if (activeTab === 'low-confidence' && lowConfQuestions.length === 0 && !lowConfLoading) {
+      setLowConfLoading(true)
+      api.getLowConfidenceQuestions()
+        .then(data => setLowConfQuestions(data || []))
+        .catch(() => {})
+        .finally(() => setLowConfLoading(false))
+    }
+  }, [activeTab])
 
   const handleSave = async () => {
     setSaving(true)
@@ -391,6 +403,7 @@ export default function AdminPage() {
 
   const tabs = [
     { id: 'users', label: 'משתמשים', icon: 'group', count: users.length },
+    { id: 'low-confidence', label: 'AI לא בטוח', icon: 'help_center', count: lowConfQuestions.length || undefined },
     { id: 'settings', label: 'הגדרות', icon: 'settings' },
     { id: 'test', label: 'ניסיון צ\'אט', icon: 'science' },
   ]
@@ -702,6 +715,93 @@ export default function AdminPage() {
           </div>
 
         </>)}
+
+        {/* ======= LOW CONFIDENCE TAB ======= */}
+        {activeTab === 'low-confidence' && (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center">
+                  <span className="material-symbols-outlined text-amber-600">help_center</span>
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold text-gray-900">שאלות שה-AI לא בטוח בהן</h2>
+                  <p className="text-xs text-gray-500">תשובות עם ציון ביטחון מתחת ל-6 מתוך 10</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setLowConfLoading(true)
+                  api.getLowConfidenceQuestions()
+                    .then(data => setLowConfQuestions(data || []))
+                    .catch(() => {})
+                    .finally(() => setLowConfLoading(false))
+                }}
+                className="text-xs text-gray-400 hover:text-primary flex items-center gap-1 transition-colors"
+              >
+                <span className="material-symbols-outlined text-sm">refresh</span>
+                רענון
+              </button>
+            </div>
+
+            <div className="p-5">
+              {lowConfLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+                </div>
+              ) : lowConfQuestions.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="w-14 h-14 bg-green-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                    <span className="material-symbols-outlined text-green-500 text-2xl">verified</span>
+                  </div>
+                  <p className="text-gray-500 text-sm font-medium">אין שאלות עם ציון ביטחון נמוך</p>
+                  <p className="text-gray-400 text-xs mt-1">ה-AI בטוח בכל התשובות שנתן</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {lowConfQuestions.map(q => (
+                    <div key={q.id} className="border border-gray-200 rounded-xl p-4 hover:border-amber-200 transition-colors">
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div className="flex items-center gap-2">
+                          <div className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                            q.confidenceScore <= 3 ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'
+                          }`}>
+                            ציון: {q.confidenceScore}/10
+                          </div>
+                          <span className="text-xs text-gray-400">{q.userName}</span>
+                          <span className="text-xs text-gray-300">·</span>
+                          <span className="text-xs text-gray-400">
+                            {q.createdAt ? new Date(q.createdAt).toLocaleDateString('he-IL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}
+                          </span>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await api.deleteLowConfidenceQuestion(q.id)
+                              setLowConfQuestions(prev => prev.filter(x => x.id !== q.id))
+                            } catch {}
+                          }}
+                          className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all shrink-0"
+                          title="מחיקה"
+                        >
+                          <span className="material-symbols-outlined text-base">close</span>
+                        </button>
+                      </div>
+                      <div className="mb-2">
+                        <p className="text-xs font-bold text-gray-500 mb-1">שאלת המשתמש:</p>
+                        <p className="text-sm text-gray-800 bg-primary/5 rounded-lg px-3 py-2">{q.question}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-gray-500 mb-1">תשובת ה-AI:</p>
+                        <p className="text-sm text-gray-600 bg-gray-50 rounded-lg px-3 py-2 max-h-32 overflow-y-auto leading-relaxed">{q.answer}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* ======= TEST CHAT TAB ======= */}
         {activeTab === 'test' && (

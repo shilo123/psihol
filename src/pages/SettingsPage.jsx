@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '../../shared/authStore'
 import { calculateAge } from '../../shared/constants'
@@ -24,11 +24,7 @@ export default function SettingsPage() {
   const [childForm, setChildForm] = useState({ name: '', birthDate: '', gender: 'boy', personality: '' })
   const [savingChild, setSavingChild] = useState(false)
   const [emailNotifications, setEmailNotifications] = useState(true)
-  const [apiStats, setApiStats] = useState(null)
 
-  useEffect(() => {
-    api.getStats().then(setApiStats).catch(() => {})
-  }, [])
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof localStorage !== 'undefined') {
       return localStorage.getItem('darkMode') === 'true'
@@ -44,41 +40,6 @@ export default function SettingsPage() {
       document.documentElement.classList.add('dark')
     } else {
       document.documentElement.classList.remove('dark')
-    }
-  }
-
-  const [showPromptModal, setShowPromptModal] = useState(false)
-  const [promptText, setPromptText] = useState('')
-  const [promptLoading, setPromptLoading] = useState(false)
-  const [promptSaving, setPromptSaving] = useState(false)
-  const [promptSaved, setPromptSaved] = useState(false)
-
-  async function openPromptModal() {
-    setShowPromptModal(true)
-    setPromptLoading(true)
-    setPromptSaved(false)
-    try {
-      const data = await api.getSystemPrompt()
-      setPromptText(data.prompt || '')
-    } catch (err) {
-      console.error('Failed to load system prompt:', err)
-      setPromptText('')
-    } finally {
-      setPromptLoading(false)
-    }
-  }
-
-  async function handleSavePrompt() {
-    if (!promptText.trim()) return
-    setPromptSaving(true)
-    try {
-      await api.updateSystemPrompt(promptText)
-      setPromptSaved(true)
-      setTimeout(() => setPromptSaved(false), 2000)
-    } catch (err) {
-      console.error('Failed to save system prompt:', err)
-    } finally {
-      setPromptSaving(false)
     }
   }
 
@@ -204,27 +165,6 @@ export default function SettingsPage() {
           <span className="material-symbols-outlined text-xs">chevron_left</span>
           <span className="text-text-main font-medium">פרופיל והגדרות</span>
         </nav>
-
-        {/* ── System Prompt Block ── */}
-        <button
-          onClick={openPromptModal}
-          className="w-full mb-6 relative overflow-hidden rounded-2xl bg-gradient-to-l from-primary via-purple-500 to-indigo-600 p-6 shadow-lg hover:shadow-xl hover:shadow-primary/20 transition-all duration-300 group"
-        >
-          {/* Decorative */}
-          <div className="absolute top-0 left-0 size-40 rounded-full bg-white/10 -translate-x-1/2 -translate-y-1/2"></div>
-          <div className="absolute bottom-0 right-0 size-28 rounded-full bg-white/5 translate-x-1/3 translate-y-1/3"></div>
-
-          <div className="relative flex items-center gap-4">
-            <div className="size-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform">
-              <span className="material-symbols-outlined text-white text-3xl">edit_note</span>
-            </div>
-            <div className="flex-1 text-right">
-              <h3 className="font-black text-xl text-white mb-1">קורקל כתוב System Prompt</h3>
-              <p className="text-white/70 text-sm">ערוך את ההנחיות שה-AI מקבל בכל שיחה</p>
-            </div>
-            <span className="material-symbols-outlined text-white/50 text-2xl group-hover:text-white/80 transition-colors">chevron_left</span>
-          </div>
-        </button>
 
         {/* 2-col grid */}
         <div className="grid lg:grid-cols-12 gap-6">
@@ -581,53 +521,6 @@ export default function SettingsPage() {
         </div>
       </main>
 
-      {/* ───────── API Cost Info ───────── */}
-      <div className="max-w-[1024px] mx-auto px-4 mt-8">
-        <div className="bg-gray-50 dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-gray-400 text-base">payments</span>
-              <span className="text-xs font-bold text-gray-500">עלויות API (GPT-4.1)</span>
-            </div>
-            {apiStats?.tokens?.totalCost > 0 && (
-              <span className="text-sm font-black text-primary bg-primary/10 px-3 py-1 rounded-full">
-                ${apiStats.tokens.totalCost.toFixed(4)}
-              </span>
-            )}
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-            <div>
-              <p className="text-[10px] text-gray-400 mb-0.5">Input tokens</p>
-              <p className="text-xs font-mono font-bold text-gray-600">{apiStats?.tokens?.totalInputTokens?.toLocaleString() ?? '...'}</p>
-              <p className="text-[10px] text-gray-400">${apiStats?.tokens?.totalInputCost?.toFixed(4) ?? '0'}</p>
-            </div>
-            <div>
-              <p className="text-[10px] text-gray-400 mb-0.5">Output tokens</p>
-              <p className="text-xs font-mono font-bold text-gray-600">{apiStats?.tokens?.totalOutputTokens?.toLocaleString() ?? '...'}</p>
-              <p className="text-[10px] text-gray-400">${apiStats?.tokens?.totalOutputCost?.toFixed(4) ?? '0'}</p>
-            </div>
-            <div>
-              <p className="text-[10px] text-gray-400 mb-0.5">סה"כ הודעות AI</p>
-              <p className="text-xs font-mono font-bold text-gray-600">{apiStats?.tokens?.totalMessages ?? '0'}</p>
-            </div>
-            <div>
-              <p className="text-[10px] text-gray-400 mb-0.5">סה"כ שיחות</p>
-              <p className="text-xs font-mono font-bold text-primary">{apiStats?.totalConversations ?? '...'}</p>
-            </div>
-          </div>
-          <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-200">
-            <p className="text-[10px] text-gray-400">
-              תמחור: $2.00/1M input • $8.00/1M output • סיכום: gpt-4.1-mini ($0.40/$1.60)
-            </p>
-            {apiStats?.tokens?.totalMessages > 0 && (
-              <p className="text-[10px] font-bold text-gray-500">
-                ~${(apiStats.tokens.totalCost / apiStats.tokens.totalMessages).toFixed(4)} / הודעה
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
-
       {/* ───────── Footer ───────── */}
       <footer className="border-t border-border-color dark:border-gray-800 bg-white/60 dark:bg-surface-dark/60 mt-12">
         <div className="max-w-[1024px] mx-auto px-4 py-6 flex flex-col sm:flex-row items-center justify-between gap-3">
@@ -693,93 +586,6 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* ───────── System Prompt Modal ───────── */}
-      {showPromptModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            onClick={() => setShowPromptModal(false)}
-          />
-
-          {/* Modal card */}
-          <div className="relative w-full max-w-2xl bg-white dark:bg-surface-dark rounded-2xl shadow-2xl border border-border-color dark:border-gray-700 overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-border-color dark:border-gray-700">
-              <div className="flex items-center gap-3">
-                <div className="size-10 rounded-xl bg-primary-light dark:bg-primary/20 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-primary text-xl">edit_note</span>
-                </div>
-                <div>
-                  <h3 className="font-bold text-text-main dark:text-gray-100 text-lg">System Prompt</h3>
-                  <p className="text-xs text-text-muted dark:text-gray-500">ההנחיות שה-AI מקבל בכל שיחה</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowPromptModal(false)}
-                className="size-9 rounded-xl flex items-center justify-center text-text-muted hover:text-text-main hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
-              >
-                <span className="material-symbols-outlined text-xl">close</span>
-              </button>
-            </div>
-
-            {/* Body */}
-            <div className="p-6">
-              {promptLoading ? (
-                <div className="flex items-center justify-center py-12 gap-3 text-text-muted dark:text-gray-400">
-                  <span className="material-symbols-outlined text-xl animate-spin">progress_activity</span>
-                  <span className="text-sm">טוען...</span>
-                </div>
-              ) : (
-                <textarea
-                  value={promptText}
-                  onChange={e => setPromptText(e.target.value)}
-                  dir="rtl"
-                  rows={10}
-                  placeholder="כתבו כאן את ההנחיות ל-AI..."
-                  className="w-full px-4 py-3 rounded-xl border-2 border-border-color dark:border-gray-600 bg-background-light dark:bg-background-dark text-sm text-text-main dark:text-gray-200 placeholder:text-text-muted/50 leading-relaxed resize-y focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
-                  style={{ minHeight: '200px', maxHeight: '400px' }}
-                />
-              )}
-            </div>
-
-            {/* Footer */}
-            <div className="flex items-center justify-between px-6 py-4 border-t border-border-color dark:border-gray-700 bg-background-light/50 dark:bg-background-dark/50">
-              <p className="text-xs text-text-muted dark:text-gray-500">השינויים ישפיעו על שיחות חדשות</p>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setShowPromptModal(false)}
-                  className="px-5 py-2.5 rounded-xl border border-border-color dark:border-gray-600 text-sm font-medium text-text-muted hover:text-text-main hover:border-gray-300 transition-all"
-                >
-                  ביטול
-                </button>
-                <button
-                  onClick={handleSavePrompt}
-                  disabled={promptSaving || promptLoading}
-                  className="px-6 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2 shadow-sm"
-                >
-                  {promptSaving ? (
-                    <>
-                      <span className="material-symbols-outlined text-base animate-spin">progress_activity</span>
-                      שומר...
-                    </>
-                  ) : promptSaved ? (
-                    <>
-                      <span className="material-symbols-outlined text-base">check</span>
-                      נשמר!
-                    </>
-                  ) : (
-                    <>
-                      <span className="material-symbols-outlined text-base">save</span>
-                      שמירה
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

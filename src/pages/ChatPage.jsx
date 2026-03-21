@@ -67,6 +67,12 @@ export default function ChatPage() {
   const startTempChat = useChatStore((s) => s.startTempChat)
   const isTempChat = useChatStore((s) => s.isTempChat)
 
+  function handleLogout() {
+    logout()
+    useChatStore.setState({ conversations: [], currentConversation: null, messages: [], streamingContent: '', isTempChat: false })
+    navigate('/')
+  }
+
   /* ---- Local state ---- */
   const [inputText, setInputText] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -95,9 +101,9 @@ export default function ChatPage() {
     }
   }, [isLoggedIn, conversations, currentConversation, selectConversation])
 
-  // Navigate to onboarding after login if not onboarded
+  // Navigate to onboarding after login if not onboarded (skip for guests)
   useEffect(() => {
-    if (isLoggedIn && user && !isOnboarded) {
+    if (isLoggedIn && user && !isOnboarded && !isGuest) {
       navigate('/onboarding')
     }
   }, [isLoggedIn, isGuest, user, isOnboarded, navigate])
@@ -406,8 +412,7 @@ export default function ChatPage() {
             {/* Guest button */}
             <button
               onClick={async () => {
-                const u = await loginAsGuest()
-                if (u) navigate('/onboarding')
+                await loginAsGuest()
               }}
               disabled={loading}
               className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gray-100 hover:bg-gray-200 rounded-2xl transition-all duration-200 text-text-secondary font-medium disabled:opacity-50"
@@ -780,7 +785,7 @@ export default function ChatPage() {
                 <p className="text-xs text-text-muted dark:text-gray-500 truncate">{user?.email || ''}</p>
               </div>
               <button
-                onClick={logout}
+                onClick={handleLogout}
                 className="size-8 flex items-center justify-center rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                 title="התנתקות"
               >
@@ -827,17 +832,27 @@ export default function ChatPage() {
         }
         .child-select-btn {
           display: inline-flex;
+          flex-direction: column;
           align-items: center;
-          gap: 8px;
+          gap: 2px;
           padding: 10px 22px;
           margin: 4px 4px;
           color: white;
           border: none;
-          border-radius: 9999px;
+          border-radius: 16px;
           font-weight: 800;
           font-size: 14px;
           cursor: pointer;
           transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .child-btn-name {
+          font-size: 14px;
+          font-weight: 800;
+        }
+        .child-btn-personality {
+          font-size: 10px;
+          font-weight: 500;
+          opacity: 0.85;
         }
         .child-select-btn:hover {
           transform: translateY(-3px) scale(1.03);

@@ -196,8 +196,7 @@ router.post('/register', async (req, res) => {
 // POST /guest - Create a temporary guest user (auto-deletes after 3 days)
 router.post('/guest', async (req, res) => {
   try {
-    const GUEST_NAMES = ['נועה', 'יוסי', 'מיכל', 'אורי', 'דנה', 'עומר', 'שירה', 'איתי', 'רונית', 'גיל', 'תמר', 'אלון', 'ליאת', 'עידו', 'הדס'];
-    const name = GUEST_NAMES[Math.floor(Math.random() * GUEST_NAMES.length)];
+    const name = 'אורח';
     const id = uuidv4();
     const expiresAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000); // 3 days
 
@@ -206,7 +205,7 @@ router.post('/guest', async (req, res) => {
       email: `guest-${id.slice(0, 8)}@guest.psihologit.app`,
       name,
       picture: '',
-      parentName: '',
+      parentName: 'אורח',
       parentAge: '',
       parentStyle: '',
       children: [],

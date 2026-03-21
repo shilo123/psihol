@@ -14,6 +14,7 @@ import {
   getMemories,
   addMemory,
   getSetting,
+  saveLowConfidenceQuestion,
 } from '../db.js';
 
 const router = Router();
@@ -68,6 +69,13 @@ function buildSystemMessage(systemPrompt, user, memories = []) {
   contextParts.push('תמיד תני תשובות מפורטות, מקצועיות ואמפתיות. אל תקצרי. השתמשי בדוגמאות ובטיפים מעשיים.');
 
   // Memory extraction instruction
+  // Confidence score instruction
+  contextParts.push('\n*** ציון ביטחון ***');
+  contextParts.push('בסוף כל תשובה, הוסיפי תג מיוחד שמציין עד כמה את בטוחה בתשובה שלך בסולם 1-10:');
+  contextParts.push('[[confidence:מספר]]');
+  contextParts.push('לדוגמה: [[confidence:8]] אם את בטוחה מאוד, או [[confidence:4]] אם את פחות בטוחה.');
+  contextParts.push('10 = בטוחה לגמרי, 1 = לא בטוחה בכלל. תני ציון כנה.');
+
   contextParts.push('\n*** שמירת זיכרונות ***');
   contextParts.push('כשההורה מספר פרט חשוב על ילד (למשל: בעיה ספציפית, הישג, שינוי, התנהגות חוזרת), הוסיפי בסוף התשובה שלך תג מיוחד בפורמט:');
   contextParts.push('[[memory:שם_הילד:תוכן_הזיכרון]]');
@@ -228,7 +236,7 @@ async function streamOpenAI(res, messages) {
           model: 'gpt-4.1',
           messages,
           temperature: parseFloat(await getSetting('chatTemperature')) || 0.7,
-          max_tokens: 1500,
+          max_tokens: 800,
           stream: true,
           stream_options: { include_usage: true },
         }),
@@ -288,6 +296,16 @@ async function streamOpenAI(res, messages) {
   return fullContent;
 }
 
+// Extract confidence score from AI response
+function extractConfidence(content) {
+  const match = content.match(/\[\[confidence:(\d+)\]\]/);
+  if (match) {
+    const score = parseInt(match[1], 10);
+    return Math.min(10, Math.max(1, score));
+  }
+  return null;
+}
+
 // Extract and save memories from AI response
 async function extractAndSaveMemories(userId, content) {
   const regex = /\[\[memory:([^:\]]+):([^\]]+)\]\]/g;
@@ -306,8 +324,8 @@ async function extractAndSaveMemories(userId, content) {
       console.error('Failed to save memory:', e);
     }
   }
-  // Return content without memory tags
-  return content.replace(/\s*\[\[memory:[^\]]+\]\]/g, '');
+  // Return content without memory and confidence tags
+  return content.replace(/\s*\[\[memory:[^\]]+\]\]/g, '').replace(/\s*\[\[confidence:\d+\]\]/g, '');
 }
 
 // ============================================================
@@ -421,8 +439,24 @@ router.post('/conversations/:id/messages', async (req, res) => {
 
     let fullContent = await streamOpenAI(res, messages);
 
+    // Extract confidence score before cleaning tags
+    const confidenceScore = extractConfidence(fullContent);
+
     // Extract and save memories from AI response
     fullContent = await extractAndSaveMemories(user.id, fullContent);
+
+    // Save low-confidence questions (score < 6)
+    if (confidenceScore !== null && confidenceScore < 6) {
+      saveLowConfidenceQuestion({
+        id: uuidv4(),
+        userId: user.id,
+        userName: user.parentName || user.name || 'אורח',
+        question: content,
+        answer: fullContent,
+        confidenceScore,
+        conversationId: conversation.id,
+      }).catch(e => console.error('Failed to save low-confidence question:', e));
+    }
 
     // Save assistant message
     const assistantMessage = {
@@ -430,6 +464,7 @@ router.post('/conversations/:id/messages', async (req, res) => {
       role: 'assistant',
       content: fullContent,
       timestamp: assistantTimestamp,
+      confidenceScore: confidenceScore || undefined,
     };
 
     const isFirstMessage = conversation.messages.length === 0;

@@ -221,6 +221,30 @@ export async function deleteMemory(id, userId) {
   return result.deletedCount > 0;
 }
 
+// --- Low-confidence questions ---
+export async function saveLowConfidenceQuestion(data) {
+  const database = await getDb();
+  await database.collection('low_confidence_questions').insertOne({
+    ...data,
+    createdAt: new Date().toISOString(),
+  });
+}
+
+export async function getLowConfidenceQuestions() {
+  const database = await getDb();
+  return database.collection('low_confidence_questions')
+    .find()
+    .sort({ createdAt: -1 })
+    .limit(100)
+    .toArray();
+}
+
+export async function deleteLowConfidenceQuestion(id) {
+  const database = await getDb();
+  const result = await database.collection('low_confidence_questions').deleteOne({ id });
+  return result.deletedCount > 0;
+}
+
 // --- Auth helper ---
 export async function getUserFromToken(req) {
   const token = req.headers.authorization?.replace('Bearer ', '');
