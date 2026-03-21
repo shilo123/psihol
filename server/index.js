@@ -7,7 +7,6 @@ import authRoutes from './routes/auth.js';
 import chatRoutes from './routes/chat.js';
 import userRoutes from './routes/user.js';
 import adminRoutes from './routes/admin.js';
-import { getUserFromToken } from './db.js';
 
 // Load .env from project root (not server/)
 const __filename = fileURLToPath(import.meta.url);
@@ -24,22 +23,11 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Admin auth middleware
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean);
-
-async function requireAdmin(req, res, next) {
-  const user = await getUserFromToken(req);
-  if (!user || !ADMIN_EMAILS.includes(user.email)) {
-    return res.status(403).json({ error: 'אין הרשאת מנהל' });
-  }
-  next();
-}
-
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/user', userRoutes);
-app.use('/api/admin', requireAdmin, adminRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
