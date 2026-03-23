@@ -94,7 +94,7 @@ export default function SettingsPage() {
   return (
     <div dir="rtl" className="min-h-screen bg-background-light dark:bg-background-dark">
       {/* ───────── Header ───────── */}
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 dark:bg-surface-dark/80 border-b border-border-color dark:border-gray-800">
+      <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 dark:bg-surface-dark/80 border-b border-border-color dark:border-gray-800 anim-fade-in-down">
         <div className="max-w-[1200px] mx-auto flex items-center justify-between px-4 h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2.5 no-underline">
@@ -160,7 +160,7 @@ export default function SettingsPage() {
       {/* ───────── Main Content ───────── */}
       <main className="max-w-[1024px] mx-auto py-8 px-4">
         {/* Breadcrumbs */}
-        <nav className="flex items-center gap-2 text-sm text-text-muted mb-8">
+        <nav className="flex items-center gap-2 text-sm text-text-muted mb-8 anim-fade-in anim-delay-1">
           <Link to="/" className="hover:text-primary transition-colors no-underline text-text-muted">בית</Link>
           <span className="material-symbols-outlined text-xs">chevron_left</span>
           <span className="text-text-main font-medium">פרופיל והגדרות</span>
@@ -173,7 +173,7 @@ export default function SettingsPage() {
           <div className="lg:col-span-8 space-y-6">
 
             {/* ── Profile Card ── */}
-            <div className="bg-white dark:bg-surface-dark rounded-2xl border border-border-color dark:border-gray-700 shadow-soft overflow-hidden">
+            <div className="bg-white dark:bg-surface-dark rounded-2xl border border-border-color dark:border-gray-700 shadow-soft overflow-hidden anim-fade-in-up anim-delay-1">
               {/* Gradient banner */}
               <div className="h-28 bg-gradient-to-l from-primary via-purple-500 to-indigo-500 relative">
                 <div className="absolute inset-0 opacity-20">
@@ -223,7 +223,7 @@ export default function SettingsPage() {
             </div>
 
             {/* ── Children Management ── */}
-            <div className="bg-white dark:bg-surface-dark rounded-2xl border border-border-color dark:border-gray-700 shadow-soft p-6">
+            <div className="bg-white dark:bg-surface-dark rounded-2xl border border-border-color dark:border-gray-700 shadow-soft p-6 anim-fade-in-up anim-delay-2">
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-3">
                   <div className="size-10 rounded-xl bg-primary-light flex items-center justify-center">
@@ -373,7 +373,7 @@ export default function SettingsPage() {
             </div>
 
             {/* ── Subscription Card ── */}
-            <div className="bg-white dark:bg-surface-dark rounded-2xl border border-border-color dark:border-gray-700 shadow-soft p-6">
+            <div className="bg-white dark:bg-surface-dark rounded-2xl border border-border-color dark:border-gray-700 shadow-soft p-6 anim-fade-in-up anim-delay-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="size-10 rounded-xl bg-amber-50 flex items-center justify-center">
@@ -400,7 +400,7 @@ export default function SettingsPage() {
           <div className="lg:col-span-4 space-y-6">
 
             {/* ── Talk to human card ── */}
-            <div className="relative rounded-2xl overflow-hidden p-6 bg-gradient-to-br from-purple-600 via-primary to-indigo-600 text-white shadow-lg">
+            <div className="relative rounded-2xl overflow-hidden p-6 bg-gradient-to-br from-purple-600 via-primary to-indigo-600 text-white shadow-lg anim-slide-left anim-delay-2">
               {/* Decorative blobs */}
               <div className="absolute top-0 left-0 size-32 rounded-full bg-white/10 -translate-x-1/2 -translate-y-1/2"></div>
               <div className="absolute bottom-0 right-0 size-24 rounded-full bg-white/5 translate-x-1/3 translate-y-1/3"></div>
@@ -421,7 +421,7 @@ export default function SettingsPage() {
             </div>
 
             {/* ── General Settings ── */}
-            <div className="bg-white dark:bg-surface-dark rounded-2xl border border-border-color dark:border-gray-700 shadow-soft overflow-hidden">
+            <div className="bg-white dark:bg-surface-dark rounded-2xl border border-border-color dark:border-gray-700 shadow-soft overflow-hidden anim-fade-in-up anim-delay-3">
               <div className="px-6 py-4 border-b border-border-color dark:border-gray-700">
                 <h3 className="font-bold text-text-main flex items-center gap-2">
                   <span className="material-symbols-outlined text-lg text-text-muted">tune</span>
@@ -522,7 +522,7 @@ export default function SettingsPage() {
       </main>
 
       {/* ───────── Footer ───────── */}
-      <footer className="border-t border-border-color dark:border-gray-800 bg-white/60 dark:bg-surface-dark/60 mt-12">
+      <footer className="border-t border-border-color dark:border-gray-800 bg-white/60 dark:bg-surface-dark/60 mt-12 anim-fade-in anim-delay-4">
         <div className="max-w-[1024px] mx-auto px-4 py-6 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs text-text-muted">© {new Date().getFullYear()} פסיכולוגית בכיס. כל הזכויות שמורות.</p>
           <div className="flex items-center gap-4">
@@ -537,7 +537,7 @@ export default function SettingsPage() {
       {showDeleteAccount && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={() => setShowDeleteAccount(false)}>
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-          <div className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+          <div className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm anim-scale-in" onClick={e => e.stopPropagation()}>
             <div className="flex justify-center mb-4">
               <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
                 <span className="material-symbols-outlined text-red-600 text-4xl">warning</span>

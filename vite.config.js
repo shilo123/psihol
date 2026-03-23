@@ -15,6 +15,16 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:3001',
         changeOrigin: true,
+        configure: (proxy) => {
+          // Prevent buffering of SSE streams
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            if (proxyRes.headers['content-type']?.includes('text/event-stream')) {
+              res.setHeader('X-Accel-Buffering', 'no');
+              res.setHeader('Cache-Control', 'no-cache');
+              res.setHeader('Connection', 'keep-alive');
+            }
+          });
+        },
       }
     }
   }

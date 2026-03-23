@@ -66,7 +66,19 @@ function buildSystemMessage(systemPrompt, user, memories = []) {
   }
 
   contextParts.push('\nהתאימי את התשובות שלך לפרופיל הספציפי של הילד/ים. השתמשי בשמות שלהם. התייחסי לגיל ולאתגרים.');
-  contextParts.push('תמיד תני תשובות מפורטות, מקצועיות ואמפתיות. אל תקצרי. השתמשי בדוגמאות ובטיפים מעשיים.');
+  contextParts.push('תני תשובות מקצועיות, אמפתיות ותמציתיות. השתמשי בדוגמאות ובטיפים מעשיים. היי ממוקדת ואל תאריכי מעבר לנדרש.');
+  contextParts.push('*** חשוב: אורך התשובה ***');
+  contextParts.push('הגבילי את התשובה ל-120 מילים לכל היותר (לא כולל תגי followup/confidence/memory). תמצתי. אל תחזרי על עצמך.');
+
+  // Follow-up suggestions instruction
+  contextParts.push('\n*** שאלות המשך ***');
+  contextParts.push('בסוף כל תשובה (לפני תגי confidence ו-memory), הוסיפי בדיוק 2 שאלות המשך רלוונטיות שההורה עשוי לרצות לשאול.');
+  contextParts.push('השתמשי בפורמט הבא (כל שאלה בשורה נפרדת):');
+  contextParts.push('[[followup:טקסט השאלה]]');
+  contextParts.push('לדוגמה:');
+  contextParts.push('[[followup:איך אני מתמודד/ת עם זה בלילה?]]');
+  contextParts.push('[[followup:האם זה נורמלי לגיל הזה?]]');
+  contextParts.push('השאלות צריכות להיות קצרות, רלוונטיות לנושא, ולעזור להורה להעמיק בנושא.');
 
   // Memory extraction instruction
   // Confidence score instruction
@@ -324,7 +336,7 @@ async function extractAndSaveMemories(userId, content) {
       console.error('Failed to save memory:', e);
     }
   }
-  // Return content without memory and confidence tags
+  // Return content without memory, confidence, and followup tags (followups kept for client rendering)
   return content.replace(/\s*\[\[memory:[^\]]+\]\]/g, '').replace(/\s*\[\[confidence:\d+\]\]/g, '');
 }
 
@@ -423,13 +435,14 @@ router.post('/conversations/:id/messages', async (req, res) => {
     const assistantId = uuidv4();
     const assistantTimestamp = new Date().toISOString();
 
-    // SSE setup
+    // SSE setup - disable buffering for real-time streaming
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
+      'Cache-Control': 'no-cache, no-transform',
       'Connection': 'keep-alive',
       'X-Accel-Buffering': 'no',
     });
+    res.flushHeaders();
 
     res.write(`data: ${JSON.stringify({ type: 'user_message', message: userMessage })}\n\n`);
 
@@ -506,10 +519,11 @@ router.post('/temp', async (req, res) => {
 
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
+      'Cache-Control': 'no-cache, no-transform',
       'Connection': 'keep-alive',
       'X-Accel-Buffering': 'no',
     });
+    res.flushHeaders();
 
     res.write(`data: ${JSON.stringify({ type: 'user_message', message: userMessage })}\n\n`);
 

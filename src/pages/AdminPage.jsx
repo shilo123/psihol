@@ -52,7 +52,7 @@ function UserDetailPopup({ userId, onClose, onDelete, onSave }) {
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div
-        className="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto"
+        className="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto anim-scale-in"
         onClick={e => e.stopPropagation()}
       >
         {loading ? (
@@ -217,7 +217,7 @@ function UserDetailPopup({ userId, onClose, onDelete, onSave }) {
         {showDeleteConfirm && (
           <div className="absolute inset-0 z-10 flex items-center justify-center p-6" onClick={() => setShowDeleteConfirm(false)}>
             <div className="absolute inset-0 bg-black/30 rounded-3xl" />
-            <div className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+            <div className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm anim-scale-in" onClick={e => e.stopPropagation()}>
               <div className="flex justify-center mb-4">
                 <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center">
                   <span className="material-symbols-outlined text-red-600 text-3xl">warning</span>
@@ -411,7 +411,7 @@ export default function AdminPage() {
   return (
     <div dir="rtl" className="min-h-screen bg-background-light">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm">
+      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm anim-fade-in-down">
         <div className="max-w-5xl mx-auto px-6 md:px-10 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
@@ -430,7 +430,7 @@ export default function AdminPage() {
       <main className="max-w-5xl mx-auto p-6 md:p-10 space-y-6">
         {/* Stats Row */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm anim-float-in anim-delay-1">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
                 <span className="material-symbols-outlined text-blue-600 text-lg">group</span>
@@ -439,7 +439,7 @@ export default function AdminPage() {
             </div>
             <p className="text-2xl font-bold text-gray-900">{stats.totalUsers?.toLocaleString() || 0}</p>
           </div>
-          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm anim-float-in anim-delay-2">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
                 <span className="material-symbols-outlined text-primary text-lg">forum</span>
@@ -448,7 +448,7 @@ export default function AdminPage() {
             </div>
             <p className="text-2xl font-bold text-gray-900">{stats.totalConversations?.toLocaleString() || 0}</p>
           </div>
-          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm anim-float-in anim-delay-3">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-8 h-8 bg-amber-50 rounded-lg flex items-center justify-center">
                 <span className="material-symbols-outlined text-amber-600 text-lg">token</span>
@@ -457,7 +457,7 @@ export default function AdminPage() {
             </div>
             <p className="text-2xl font-bold text-gray-900">${(stats.tokens?.totalCost || 0).toFixed(2)}</p>
           </div>
-          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm anim-float-in anim-delay-4">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center">
                 <span className="material-symbols-outlined text-green-600 text-lg">cloud_done</span>
@@ -475,7 +475,7 @@ export default function AdminPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
+        <div className="flex gap-1 bg-gray-100 rounded-xl p-1 anim-fade-in-up anim-delay-3">
           {tabs.map(tab => (
             <button
               key={tab.id}
@@ -499,7 +499,7 @@ export default function AdminPage() {
 
         {/* Feedback Toast */}
         {feedback && (
-          <div className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-medium ${
+          <div className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-medium anim-fade-in-down ${
             feedback.type === 'success' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-red-50 text-red-700 border border-red-100'
           }`}>
             <span className="material-symbols-outlined text-lg">{feedback.type === 'success' ? 'check_circle' : 'error'}</span>
@@ -509,7 +509,7 @@ export default function AdminPage() {
 
         {/* ======= USERS TAB ======= */}
         {activeTab === 'users' && (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden anim-fade-in-up">
             {/* Search */}
             <div className="p-5 pb-0">
               <div className="relative">
@@ -613,7 +613,7 @@ export default function AdminPage() {
 
         {/* ======= SETTINGS TAB ======= */}
         {activeTab === 'settings' && (<>
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden anim-fade-in-up">
             <div className="p-6 md:p-8">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
@@ -666,7 +666,7 @@ export default function AdminPage() {
           </div>
 
           {/* Temperature Card */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden anim-fade-in-up">
             <div className="p-6 md:p-8">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center">

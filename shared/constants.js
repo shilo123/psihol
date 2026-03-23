@@ -67,6 +67,10 @@ export function renderMarkdown(text) {
     .replace(/((?:<li.*?<\/li>\n?)+)/g, '<ul class="space-y-2 my-3 list-none p-0">$1</ul>')
     .replace(/\s*\[\[memory:[^\]]+\]\]/g, '')
     .replace(/\s*\[\[confidence:\d+\]\]/g, '')
+    // Follow-up suggestion buttons: [[followup:question text]]
+    .replace(/\[\[followup:([^\]]+)\]\]/g, (_, question) => {
+      return `<button class="followup-btn" data-followup="${question.trim()}">${question.trim()}</button>`
+    })
     .replace(/\n\n/g, '</p><p class="mt-3">')
     .replace(/\n/g, '<br>')
 }

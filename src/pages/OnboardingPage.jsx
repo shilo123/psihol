@@ -90,7 +90,7 @@ export default function OnboardingPage() {
       <div className="max-w-xl mx-auto">
 
         {/* Progress Section */}
-        <div className="mb-8">
+        <div className="mb-8 anim-fade-in-down">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-bold text-text-secondary">
               שלב {step} מתוך 3
@@ -120,14 +120,14 @@ export default function OnboardingPage() {
 
         {/* Step 1 - Parent Details */}
         {step === 1 && (
-          <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 overflow-hidden relative">
+          <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 overflow-hidden relative anim-fade-in-up">
             {/* Decorative Blobs */}
             <div className="absolute -top-20 -left-20 w-60 h-60 bg-gradient-to-br from-primary/20 to-purple-300/20 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute -bottom-16 -right-16 w-48 h-48 bg-gradient-to-tr from-pink-200/20 to-primary/10 rounded-full blur-3xl pointer-events-none" />
 
             <div className="relative p-6 sm:p-8">
               {/* Avatar */}
-              <div className="flex justify-center mb-6">
+              <div className="flex justify-center mb-6 anim-pop-in anim-delay-1">
                 {user?.picture ? (
                   <img
                     src={user.picture}
@@ -143,15 +143,15 @@ export default function OnboardingPage() {
               </div>
 
               {/* Title */}
-              <h1 className="text-3xl font-black tracking-tight text-text-main text-center mb-2">
+              <h1 className="text-3xl font-black tracking-tight text-text-main text-center mb-2 anim-fade-in-up anim-delay-2">
                 {user?.picture ? `שלום ${user.name?.split(' ')[0] || ''}! 👋` : 'ספר/י לנו על עצמך'}
               </h1>
-              <p className="text-text-secondary text-center mb-8 text-sm">
+              <p className="text-text-secondary text-center mb-8 text-sm anim-fade-in-up anim-delay-3">
                 המידע עוזר לנו להתאים את הייעוץ אליך
               </p>
 
               {/* Fields */}
-              <div className="space-y-5">
+              <div className="space-y-5 anim-fade-in-up anim-delay-4">
                 {/* Parent Name */}
                 <div>
                   <label className="block text-sm font-bold text-text-main mb-2">שם ההורה</label>
@@ -213,7 +213,7 @@ export default function OnboardingPage() {
               </div>
 
               {/* Trust Badges */}
-              <div className="flex items-center justify-center gap-6 mt-8 pt-6 border-t border-gray-100">
+              <div className="flex items-center justify-center gap-6 mt-8 pt-6 border-t border-gray-100 anim-fade-in anim-delay-5">
                 <div className="flex items-center gap-1.5 text-xs text-text-secondary">
                   <span className="material-symbols-rounded text-green-500 text-base">lock</span>
                   מאובטח ופרטי
@@ -229,29 +229,29 @@ export default function OnboardingPage() {
 
         {/* Step 2 - Children Details */}
         {step === 2 && (
-          <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 overflow-hidden relative">
+          <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 overflow-hidden relative anim-fade-in-up">
             {/* Decorative Blobs */}
             <div className="absolute -top-20 -right-20 w-56 h-56 bg-gradient-to-bl from-pink-200/20 to-primary/15 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute -bottom-20 -left-20 w-52 h-52 bg-gradient-to-tr from-primary/15 to-yellow-200/20 rounded-full blur-3xl pointer-events-none" />
 
             <div className="relative p-6 sm:p-8">
               {/* Avatar */}
-              <div className="flex justify-center mb-6">
+              <div className="flex justify-center mb-6 anim-pop-in anim-delay-1">
                 <div className="w-20 h-20 rounded-full bg-gradient-to-br from-pink-500 to-primary flex items-center justify-center shadow-lg shadow-pink-400/30">
                   <span className="material-symbols-rounded text-white text-4xl">child_care</span>
                 </div>
               </div>
 
               {/* Title */}
-              <h1 className="text-3xl font-black tracking-tight text-text-main text-center mb-2">
+              <h1 className="text-3xl font-black tracking-tight text-text-main text-center mb-2 anim-fade-in-up anim-delay-2">
                 ספר/י לנו על הילדים
               </h1>
-              <p className="text-text-secondary text-center mb-8 text-sm">
+              <p className="text-text-secondary text-center mb-8 text-sm anim-fade-in-up anim-delay-3">
                 כדי שנוכל להתאים את התוכן באופן אישי
               </p>
 
               {/* Children list */}
-              <div className="space-y-6">
+              <div className="space-y-6 anim-fade-in-up anim-delay-4">
                 {children.map((child, idx) => (
                   <div key={idx} className={`space-y-4 ${idx > 0 ? 'pt-5 border-t-2 border-dashed border-primary/20' : ''}`}>
                     {/* Child header */}
@@ -377,7 +377,7 @@ export default function OnboardingPage() {
               </div>
 
               {/* Trust Badges */}
-              <div className="flex items-center justify-center gap-6 mt-8 pt-6 border-t border-gray-100">
+              <div className="flex items-center justify-center gap-6 mt-8 pt-6 border-t border-gray-100 anim-fade-in anim-delay-5">
                 <div className="flex items-center gap-1.5 text-xs text-text-secondary">
                   <span className="material-symbols-rounded text-green-500 text-base">lock</span>
                   מאובטח ופרטי
@@ -393,33 +393,33 @@ export default function OnboardingPage() {
 
         {/* Step 3 - Challenges */}
         {step === 3 && (
-          <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 overflow-hidden relative">
+          <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 overflow-hidden relative anim-fade-in-up">
             {/* Decorative Blobs */}
             <div className="absolute -top-16 -left-16 w-52 h-52 bg-gradient-to-br from-yellow-200/20 to-primary/15 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute -bottom-16 -right-16 w-48 h-48 bg-gradient-to-tl from-primary/15 to-pink-200/15 rounded-full blur-3xl pointer-events-none" />
 
             <div className="relative p-6 sm:p-8">
               {/* Avatar */}
-              <div className="flex justify-center mb-6">
+              <div className="flex justify-center mb-6 anim-pop-in anim-delay-1">
                 <div className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-500 to-primary flex items-center justify-center shadow-lg shadow-amber-400/30">
                   <span className="material-symbols-rounded text-white text-4xl">target</span>
                 </div>
               </div>
 
               {/* Title */}
-              <h1 className="text-3xl font-black tracking-tight text-text-main text-center mb-2">
+              <h1 className="text-3xl font-black tracking-tight text-text-main text-center mb-2 anim-fade-in-up anim-delay-2">
                 מה האתגר המרכזי?
               </h1>
-              <p className="text-text-secondary text-center mb-8 text-sm">
+              <p className="text-text-secondary text-center mb-8 text-sm anim-fade-in-up anim-delay-3">
                 בחר/י את האתגרים שהכי רלוונטיים עבורך
               </p>
 
               {/* Challenges Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {CHALLENGES.map(challenge => {
+                {CHALLENGES.map((challenge, idx) => {
                   const isSelected = selectedChallenges.includes(challenge.value)
                   return (
-                    <label key={challenge.value} className="cursor-pointer group">
+                    <label key={challenge.value} className="cursor-pointer group anim-float-in" style={{ animationDelay: `${idx * 0.06}s` }}>
                       <input
                         type="checkbox"
                         checked={isSelected}
@@ -463,7 +463,7 @@ export default function OnboardingPage() {
         )}
 
         {/* Navigation Buttons */}
-        <div className="flex items-center gap-3 mt-6">
+        <div className="flex items-center gap-3 mt-6 anim-fade-in-up anim-delay-3">
           {step > 1 && (
             <button
               type="button"
