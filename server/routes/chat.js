@@ -66,9 +66,8 @@ function buildSystemMessage(systemPrompt, user, memories = []) {
   }
 
   contextParts.push('\nהתאימי את התשובות שלך לפרופיל הספציפי של הילד/ים. השתמשי בשמות שלהם. התייחסי לגיל ולאתגרים.');
-  contextParts.push('תני תשובות מקצועיות, אמפתיות ותמציתיות. השתמשי בדוגמאות ובטיפים מעשיים. היי ממוקדת ואל תאריכי מעבר לנדרש.');
-  contextParts.push('*** חשוב: אורך התשובה ***');
-  contextParts.push('הגבילי את התשובה ל-120 מילים לכל היותר (לא כולל תגי followup/confidence/memory). תמצתי. אל תחזרי על עצמך.');
+  contextParts.push('*** חשוב מאוד - אורך התשובה ***');
+  contextParts.push('חובה: הגבילי כל תשובה ל-60 מילים לכל היותר. זו הגבלה קשיחה. תני טיפ אחד או שניים בלבד, לא יותר. אל תמספרי רשימות ארוכות. אל תחזרי על דברים. אל תוסיפי הקדמות או סיכומים. תכנסי ישר לעניין. קצר = טוב.');
 
   // Follow-up suggestions instruction
   contextParts.push('\n*** שאלות המשך ***');
@@ -248,7 +247,7 @@ async function streamOpenAI(res, messages) {
           model: 'gpt-4.1',
           messages,
           temperature: parseFloat(await getSetting('chatTemperature')) || 0.7,
-          max_tokens: 800,
+          max_tokens: 400,
           stream: true,
           stream_options: { include_usage: true },
         }),
