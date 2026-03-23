@@ -260,6 +260,10 @@ export default function ChatPage() {
 
           {/* Glass card */}
           <div className="relative z-10 w-full max-w-md mx-4 bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-8 text-center border border-white/50 anim-scale-in">
+            {/* TEST square */}
+            <div style={{ width: 120, height: 120, backgroundColor: 'red', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', borderRadius: 8 }}>
+              <span style={{ color: 'white', fontWeight: 'bold', fontSize: 20 }}>TEST 1</span>
+            </div>
             {/* Logo */}
             <div className="mx-auto mb-4 w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-xl shadow-primary/30 transform rotate-3 anim-pop-in anim-delay-1">
               <span className="material-symbols-outlined text-white text-4xl">psychology</span>
