@@ -100,6 +100,8 @@ export const api = {
   // Admin
   getSystemPrompt: () => apiRequest('/api/admin/system-prompt'),
   updateSystemPrompt: (prompt) => apiRequest('/api/admin/system-prompt', { method: 'PUT', body: JSON.stringify({ prompt }) }),
+  getTechnicalPrompt: () => apiRequest('/api/admin/technical-prompt'),
+  updateTechnicalPrompt: (prompt) => apiRequest('/api/admin/technical-prompt', { method: 'PUT', body: JSON.stringify({ prompt }) }),
   getUsers: () => apiRequest('/api/admin/users'),
   getUserDetails: (id) => apiRequest(`/api/admin/users/${id}`),
   updateUserAdmin: (id, data) => apiRequest(`/api/admin/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getAllUsers, countConversations, getSystemPrompt, setSystemPrompt, getTokenUsageStats, findUserById, updateUser, getMemories, getDb, getSetting, setSetting, getLowConfidenceQuestions, deleteLowConfidenceQuestion } from '../db.js';
+import { getAllUsers, countConversations, getSystemPrompt, setSystemPrompt, getTechnicalPrompt, setTechnicalPrompt, getTokenUsageStats, findUserById, updateUser, getMemories, getDb, getSetting, setSetting, getLowConfidenceQuestions, deleteLowConfidenceQuestion } from '../db.js';
 
 const router = Router();
 
@@ -24,6 +24,31 @@ router.put('/system-prompt', async (req, res) => {
     res.json({ prompt });
   } catch (error) {
     console.error('Update system prompt error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /technical-prompt
+router.get('/technical-prompt', async (req, res) => {
+  try {
+    const prompt = await getTechnicalPrompt();
+    res.json({ prompt });
+  } catch (error) {
+    console.error('Get technical prompt error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PUT /technical-prompt
+router.put('/technical-prompt', async (req, res) => {
+  try {
+    const { prompt } = req.body;
+    if (!prompt) return res.status(400).json({ error: 'Prompt is required' });
+
+    await setTechnicalPrompt(prompt);
+    res.json({ prompt });
+  } catch (error) {
+    console.error('Update technical prompt error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

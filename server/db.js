@@ -191,6 +191,45 @@ export async function setSystemPrompt(prompt) {
   await setSetting('systemPrompt', prompt);
 }
 
+const DEFAULT_TECHNICAL_PROMPT = `*** שאלות המשך ***
+בסוף כל תשובה (לפני תגי confidence ו-memory), הוסיפי בדיוק 2 שאלות המשך רלוונטיות שההורה עשוי לרצות לשאול.
+השתמשי בפורמט הבא (כל שאלה בשורה נפרדת):
+[[followup:טקסט השאלה]]
+לדוגמה:
+[[followup:איך אני מתמודד/ת עם זה בלילה?]]
+[[followup:האם זה נורמלי לגיל הזה?]]
+השאלות צריכות להיות קצרות, רלוונטיות לנושא, ולעזור להורה להעמיק בנושא.
+
+*** ציון ביטחון ***
+בסוף כל תשובה, הוסיפי תג מיוחד שמציין עד כמה את בטוחה בתשובה שלך בסולם 1-10:
+[[confidence:מספר]]
+לדוגמה: [[confidence:8]] אם את בטוחה מאוד, או [[confidence:4]] אם את פחות בטוחה.
+10 = בטוחה לגמרי, 1 = לא בטוחה בכלל. תני ציון כנה.
+
+*** שמירת זיכרונות ***
+כשההורה מספר פרט חשוב על ילד (למשל: בעיה ספציפית, הישג, שינוי, התנהגות חוזרת), הוסיפי בסוף התשובה שלך תג מיוחד בפורמט:
+[[memory:שם_הילד:תוכן_הזיכרון]]
+לדוגמה: [[memory:יותם:עדיין עושה קקי במכנסיים]] או [[memory:נועה:התחילה לישון לבד]]
+שמרי רק פרטים משמעותיים שיהיה חשוב לזכור בשיחות הבאות. אל תשמרי דברים טריוויאליים.
+
+*** זיהוי ילדים חדשים ***
+ילדים רשומים במערכת: {REGISTERED_CHILDREN}
+אם ההורה מזכיר ילד שלא נמצא ברשימת הילדים הרשומים, הוסיפי תג מיוחד:
+[[add_child:שם:גיל:אופי]]
+לדוגמה: אם ההורה אומר "הבן שלי יוסי בן 5 מאוד עקשן" ויוסי לא ברשימה, הוסיפי:
+[[add_child:יוסי:5:stubborn]]
+ערכי אופי אפשריים: sensitive, stubborn, anxious, energetic, calm
+הוסיפי את התג רק פעם אחת לכל ילד חדש שמזוהה. המשיכי לענות כרגיל.`;
+
+export async function getTechnicalPrompt() {
+  const prompt = await getSetting('technicalPrompt');
+  return prompt || DEFAULT_TECHNICAL_PROMPT;
+}
+
+export async function setTechnicalPrompt(prompt) {
+  await setSetting('technicalPrompt', prompt);
+}
+
 // --- User Memories (per-user AI context) ---
 export async function getMemories(userId) {
   const database = await getDb();

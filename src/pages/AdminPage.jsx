@@ -258,8 +258,11 @@ export default function AdminPage() {
   const [users, setUsers] = useState([])
   const [systemPrompt, setSystemPrompt] = useState('')
   const [savedPrompt, setSavedPrompt] = useState('')
+  const [technicalPrompt, setTechnicalPrompt] = useState('')
+  const [savedTechnicalPrompt, setSavedTechnicalPrompt] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [savingTechnical, setSavingTechnical] = useState(false)
   const [feedback, setFeedback] = useState(null)
   const [activeTab, setActiveTab] = useState('users')
   const [selectedUserId, setSelectedUserId] = useState(null)
@@ -277,8 +280,9 @@ export default function AdminPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [promptRes, usersRes, statsRes, tempRes] = await Promise.all([
+        const [promptRes, techPromptRes, usersRes, statsRes, tempRes] = await Promise.all([
           api.getSystemPrompt(),
+          api.getTechnicalPrompt(),
           api.getUsers(),
           api.getStats(),
           api.getTemperature(),
@@ -286,6 +290,9 @@ export default function AdminPage() {
         const promptText = promptRes.prompt || ''
         setSystemPrompt(promptText)
         setSavedPrompt(promptText)
+        const techText = techPromptRes.prompt || ''
+        setTechnicalPrompt(techText)
+        setSavedTechnicalPrompt(techText)
         setUsers(usersRes.users || usersRes || [])
         setStats(statsRes || { totalUsers: 0, totalConversations: 0 })
         if (tempRes.temperature !== undefined) {
@@ -328,6 +335,19 @@ export default function AdminPage() {
       setFeedback({ type: 'error', message: 'שגיאה בשמירה: ' + err.message })
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleSaveTechnical = async () => {
+    setSavingTechnical(true)
+    try {
+      await api.updateTechnicalPrompt(technicalPrompt)
+      setSavedTechnicalPrompt(technicalPrompt)
+      setFeedback({ type: 'success', message: 'הנחיות טכניות נשמרו בהצלחה' })
+    } catch (err) {
+      setFeedback({ type: 'error', message: 'שגיאה בשמירה: ' + err.message })
+    } finally {
+      setSavingTechnical(false)
     }
   }
 
@@ -383,6 +403,7 @@ export default function AdminPage() {
   }
 
   const isPromptChanged = systemPrompt !== savedPrompt
+  const isTechnicalPromptChanged = technicalPrompt !== savedTechnicalPrompt
 
   const filteredUsers = users.filter(u => {
     if (!searchQuery) return true
@@ -650,6 +671,59 @@ export default function AdminPage() {
                   className="px-8 py-3 bg-primary text-white font-semibold rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none transition-all flex items-center gap-2"
                 >
                   {saving ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      שומר...
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-lg">save</span>
+                      שמור שינויים
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Technical Prompt Card */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden anim-fade-in-up">
+            <div className="p-6 md:p-8">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
+                  <span className="material-symbols-outlined text-indigo-600">code</span>
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">הנחיות טכניות</h2>
+                  <p className="text-sm text-gray-500">פורמט תגיות, שאלות המשך, ציון ביטחון ושמירת זכרונות</p>
+                </div>
+              </div>
+
+              <div className="mt-6 relative">
+                <textarea
+                  value={technicalPrompt}
+                  onChange={e => setTechnicalPrompt(e.target.value)}
+                  className="w-full min-h-[350px] bg-background-light border-2 border-gray-200 rounded-xl p-4 text-sm font-mono text-gray-800 leading-relaxed resize-y focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all placeholder:text-gray-400"
+                  placeholder="הכנס את ההנחיות הטכניות כאן..."
+                />
+                <div className="mt-2 flex items-center justify-between text-xs text-gray-400">
+                  <span>{technicalPrompt.length.toLocaleString()} תווים</span>
+                  {isTechnicalPromptChanged && (
+                    <span className="text-amber-500 font-medium flex items-center gap-1">
+                      <span className="material-symbols-outlined text-sm">edit</span>
+                      יש שינויים שלא נשמרו
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-5 flex items-center gap-4">
+                <button
+                  onClick={handleSaveTechnical}
+                  disabled={!isTechnicalPromptChanged || savingTechnical}
+                  className="px-8 py-3 bg-primary text-white font-semibold rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none transition-all flex items-center gap-2"
+                >
+                  {savingTechnical ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                       שומר...

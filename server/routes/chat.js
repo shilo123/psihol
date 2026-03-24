@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import {
   getUserFromToken,
   getSystemPrompt,
+  getTechnicalPrompt,
   getConversationsByUser,
   getConversationById,
   createConversation,
@@ -27,7 +28,7 @@ const MAX_MESSAGES_BEFORE_SUMMARY = 20;
 // Helpers
 // ============================================================
 
-function buildSystemMessage(systemPrompt, user, memories = []) {
+function buildSystemMessage(systemPrompt, technicalPrompt, user, memories = []) {
   let contextParts = [systemPrompt];
 
   if (user.parentName) contextParts.push(`\nשם ההורה: ${user.parentName}`);
@@ -67,33 +68,17 @@ function buildSystemMessage(systemPrompt, user, memories = []) {
 
   contextParts.push('\nהתאימי את התשובות שלך לפרופיל הספציפי של הילד/ים. השתמשי בשמות שלהם. התייחסי לגיל ולאתגרים.');
   contextParts.push('*** חשוב מאוד - אורך התשובה ***');
-  contextParts.push('חובה: הגבילי כל תשובה ל-60 מילים לכל היותר. זו הגבלה קשיחה. תני טיפ אחד או שניים בלבד, לא יותר. אל תמספרי רשימות ארוכות. אל תחזרי על דברים. אל תוסיפי הקדמות או סיכומים. תכנסי ישר לעניין. קצר = טוב.');
+  contextParts.push('הגבילי כל תשובה ל-150 מילים לכל היותר. תני תשובה מפורטת ומועילה עם 2-3 טיפים מעשיים. אל תחזרי על דברים. תכנסי ישר לעניין אבל תני מספיק פירוט שההורה ירגיש שקיבל ערך אמיתי.');
 
-  // Follow-up suggestions instruction
-  contextParts.push('\n*** שאלות המשך ***');
-  contextParts.push('בסוף כל תשובה (לפני תגי confidence ו-memory), הוסיפי בדיוק 2 שאלות המשך רלוונטיות שההורה עשוי לרצות לשאול.');
-  contextParts.push('השתמשי בפורמט הבא (כל שאלה בשורה נפרדת):');
-  contextParts.push('[[followup:טקסט השאלה]]');
-  contextParts.push('לדוגמה:');
-  contextParts.push('[[followup:איך אני מתמודד/ת עם זה בלילה?]]');
-  contextParts.push('[[followup:האם זה נורמלי לגיל הזה?]]');
-  contextParts.push('השאלות צריכות להיות קצרות, רלוונטיות לנושא, ולעזור להורה להעמיק בנושא.');
+  // Technical instructions (follow-up questions, confidence scores, memory extraction, child detection)
+  // Replace {REGISTERED_CHILDREN} placeholder with actual registered children names
+  const registeredNames = (user.children && user.children.length > 0)
+    ? user.children.map(c => c.name).join(', ')
+    : 'אין ילדים רשומים';
+  const resolvedTechnicalPrompt = technicalPrompt.replace('{REGISTERED_CHILDREN}', registeredNames);
+  contextParts.push('\n' + resolvedTechnicalPrompt);
 
-  // Memory extraction instruction
-  // Confidence score instruction
-  contextParts.push('\n*** ציון ביטחון ***');
-  contextParts.push('בסוף כל תשובה, הוסיפי תג מיוחד שמציין עד כמה את בטוחה בתשובה שלך בסולם 1-10:');
-  contextParts.push('[[confidence:מספר]]');
-  contextParts.push('לדוגמה: [[confidence:8]] אם את בטוחה מאוד, או [[confidence:4]] אם את פחות בטוחה.');
-  contextParts.push('10 = בטוחה לגמרי, 1 = לא בטוחה בכלל. תני ציון כנה.');
-
-  contextParts.push('\n*** שמירת זיכרונות ***');
-  contextParts.push('כשההורה מספר פרט חשוב על ילד (למשל: בעיה ספציפית, הישג, שינוי, התנהגות חוזרת), הוסיפי בסוף התשובה שלך תג מיוחד בפורמט:');
-  contextParts.push('[[memory:שם_הילד:תוכן_הזיכרון]]');
-  contextParts.push('לדוגמה: [[memory:יותם:עדיין עושה קקי במכנסיים]] או [[memory:נועה:התחילה לישון לבד]]');
-  contextParts.push('שמרי רק פרטים משמעותיים שיהיה חשוב לזכור בשיחות הבאות. אל תשמרי דברים טריוויאליים.');
-
-  // Multi-child selection instructions
+  // Multi-child selection instructions (dynamic, depends on user's children)
   if (user.children && user.children.length > 1) {
     const childButtons = user.children.map(c => `[[child:${c.name}:${c.personality || 'calm'}:${c.gender || 'boy'}]]`).join(' ');
     contextParts.push(`\n*** הוראה קריטית - בחירת ילד ***`);
@@ -247,7 +232,7 @@ async function streamOpenAI(res, messages) {
           model: 'gpt-4.1',
           messages,
           temperature: parseFloat(await getSetting('chatTemperature')) || 0.7,
-          max_tokens: 400,
+          max_tokens: 1000,
           stream: true,
           stream_options: { include_usage: true },
         }),
@@ -428,9 +413,9 @@ router.post('/conversations/:id/messages', async (req, res) => {
 
     await pushMessage(conversation.id, user.id, userMessage);
 
-    const systemPrompt = await getSystemPrompt();
+    const [systemPrompt, technicalPrompt] = await Promise.all([getSystemPrompt(), getTechnicalPrompt()]);
     const memories = await getMemories(user.id);
-    const systemMessage = buildSystemMessage(systemPrompt, user, memories);
+    const systemMessage = buildSystemMessage(systemPrompt, technicalPrompt, user, memories);
     const assistantId = uuidv4();
     const assistantTimestamp = new Date().toISOString();
 
@@ -505,9 +490,9 @@ router.post('/temp', async (req, res) => {
     const { content, history } = req.body;
     if (!content) return res.status(400).json({ error: 'Message content is required' });
 
-    const systemPrompt = await getSystemPrompt();
+    const [systemPrompt, technicalPrompt] = await Promise.all([getSystemPrompt(), getTechnicalPrompt()]);
     const memories = user ? await getMemories(user.id) : [];
-    const systemMessage = user ? buildSystemMessage(systemPrompt, user, memories) : systemPrompt;
+    const systemMessage = user ? buildSystemMessage(systemPrompt, technicalPrompt, user, memories) : systemPrompt;
 
     const userMessage = {
       id: uuidv4(),

@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '../../shared/authStore'
 import { useChatStore } from '../../shared/chatStore'
 import { formatTime, renderMarkdown } from '../../shared/constants'
+import { api } from '../../shared/api'
 
 /* ------------------------------------------------------------------ */
 /*  Date-grouping helper                                               */
@@ -82,6 +83,7 @@ export default function ChatPage() {
   /* ---- Refs ---- */
   const scrollRef = useRef(null)
   const textareaRef = useRef(null)
+  const [showScrollBtn, setShowScrollBtn] = useState(false)
 
   /* ---- Derived ---- */
   const grouped = useMemo(() => groupConversationsByDate(conversations), [conversations])
@@ -118,6 +120,28 @@ export default function ChatPage() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
   }, [messages, sending])
+
+  // Scroll position detection for "scroll to bottom" button
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const handleScroll = () => {
+      const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+      setShowScrollBtn(distFromBottom > 200)
+    }
+    el.addEventListener('scroll', handleScroll, { passive: true })
+    return () => el.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  // Time-of-day greeting
+  const timeGreeting = useMemo(() => {
+    const h = new Date().getHours()
+    if (h < 6) return 'לילה טוב'
+    if (h < 12) return 'בוקר טוב'
+    if (h < 17) return 'צהריים טובים'
+    if (h < 21) return 'ערב טוב'
+    return 'לילה טוב'
+  }, [])
 
   // Auto-grow textarea
   useEffect(() => {
@@ -487,20 +511,26 @@ export default function ChatPage() {
         {/* -------------------------------------------------------- */}
         <main className="flex-1 flex flex-col min-w-0 relative bg-chat-bg dark:bg-background-dark">
           {/* Mini topbar inside chat area */}
-          <div className="shrink-0 h-12 px-4 flex items-center gap-3 z-10 border-b border-gray-100/60 dark:border-gray-800/40">
+          <div className="shrink-0 h-14 px-4 flex items-center gap-3 z-10 bg-white/70 dark:bg-surface-dark/70 backdrop-blur-md border-b border-gray-100/40 dark:border-gray-800/30">
             {/* Sidebar toggle — more visible on mobile */}
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="md:hidden size-9 flex items-center justify-center rounded-xl bg-white/80 dark:bg-surface-dark/80 shadow-sm hover:shadow-md transition-all"
+              className="md:hidden size-9 flex items-center justify-center rounded-xl bg-white dark:bg-surface-dark shadow-sm hover:shadow-md transition-all"
             >
               <span className="material-symbols-rounded text-primary text-xl">menu</span>
             </button>
             {/* Logo - mobile only */}
             <div className="md:hidden flex items-center gap-2">
-              <div className="size-7 bg-primary/10 rounded-lg flex items-center justify-center">
-                <span className="material-symbols-rounded text-primary text-base">psychology</span>
+              <div className="size-8 bg-gradient-to-br from-primary/15 to-purple-500/15 rounded-xl flex items-center justify-center">
+                <span className="material-symbols-rounded text-primary text-base" style={{ fontVariationSettings: "'FILL' 1" }}>psychology</span>
               </div>
-              <span className="text-sm font-bold text-text-main dark:text-gray-200">פסיכולוגית בכיס</span>
+              <div className="flex flex-col">
+                <span className="text-sm font-bold text-text-main dark:text-gray-200 leading-tight">פסיכולוגית בכיס</span>
+                <span className="text-[10px] text-emerald-500 font-medium leading-tight flex items-center gap-1">
+                  <span className="size-1.5 bg-emerald-400 rounded-full inline-block"></span>
+                  מקשיבה
+                </span>
+              </div>
             </div>
             {/* Guest upgrade nudge */}
             {isGuest && (
@@ -522,41 +552,39 @@ export default function ChatPage() {
           </div>
 
           {/* Messages container */}
-          <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 md:px-8 py-6 pb-44 scrollbar-thin">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 md:px-8 pt-5 pb-44 scrollbar-thin">
             {messages.length === 0 ? (
               /* ---- Welcome / Empty state ---- */
-              <div className="max-w-2xl mx-auto flex flex-col items-center justify-center min-h-full anim-fade-in">
-                {/* AI avatar */}
-                <div className="mb-5 relative anim-pop-in anim-delay-1">
-                  <div className="size-16 sm:size-20 rounded-3xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-2xl shadow-primary/30">
-                    <span className="material-symbols-outlined text-white text-3xl sm:text-4xl">psychology</span>
-                  </div>
-                  <div className="absolute -bottom-1 -right-1 size-4 sm:size-5 bg-emerald-500 rounded-full border-2 border-chat-bg" />
-                </div>
-
-                {/* Welcome card */}
-                <div className="relative bg-white dark:bg-surface-dark rounded-2xl shadow-lg w-full overflow-hidden mb-5 anim-fade-in-up anim-delay-2">
-                  <div className="h-1 bg-gradient-to-r from-primary/60 via-purple-400/60 to-pink-400/60" />
-                  <div className="p-5 sm:p-6 text-center">
-                    <h2 className="text-lg sm:text-xl font-bold text-text-main mb-1.5">
-                      {user?.parentName && !isGuest ? `היי ${user.parentName}` : 'שלום'}! איך אוכל לעזור?
+              <div className="max-w-2xl mx-auto flex flex-col items-center anim-fade-in px-2">
+                {/* Welcome card with integrated avatar — warm and personal */}
+                <div className="relative bg-white dark:bg-surface-dark rounded-3xl shadow-lg shadow-primary/8 w-full mb-4 anim-fade-in-up anim-delay-1">
+                  <div className="px-5 pt-5 pb-4 sm:px-8 sm:pt-6 sm:pb-5 text-center">
+                    <p className="text-sm text-primary/80 font-bold mb-1.5">{timeGreeting}{user?.parentName && !isGuest ? ` ${user.parentName}` : ''} 👋</p>
+                    <h2 className="text-xl sm:text-2xl font-extrabold text-text-main mb-3 leading-tight">
+                      איך אוכל לעזור היום?
                     </h2>
-                    <p className="text-text-muted text-sm leading-relaxed">
+                    <p className="text-text-muted text-sm leading-relaxed max-w-sm mx-auto">
                       {user?.children?.length > 0
-                        ? `רוצה לדבר על ${user.children.map(c => c.name).join(', ')}? אני כאן בשבילך.`
-                        : 'אני כאן בשבילכם - שאלו כל שאלה על הורות, חינוך או התפתחות הילד.'
+                        ? `אני כאן בשבילך, לדבר על ${user.children.map(c => c.name).join(' ו')} או על כל נושא אחר. זה מקום בטוח לשאול הכל.`
+                        : 'מקום בטוח ופרטי לדבר על כל מה שמטריד אתכם כהורים.'
                       }
                     </p>
+
+                    {/* Safe space indicator — inside the card */}
+                    <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                      <span className="material-symbols-rounded text-emerald-500 text-sm">verified_user</span>
+                      <span className="text-xs text-text-muted font-medium">שיחה פרטית ומאובטחת</span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Quick suggestion chips */}
-                <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-2 anim-fade-in-up anim-delay-3">
+                {/* Quick suggestion chips — emotionally-worded, warm */}
+                <div className="w-full space-y-2.5 anim-fade-in-up anim-delay-3">
                   {[
-                    { icon: 'bedtime', text: 'הילד שלי לא נרדם בלילה', color: 'from-indigo-500/10 to-purple-500/10 text-indigo-600' },
-                    { icon: 'sentiment_frustrated', text: 'איך להתמודד עם התפרצויות זעם?', color: 'from-red-500/10 to-orange-500/10 text-red-500' },
-                    { icon: 'devices', text: 'כמה זמן מסך מותר לילד?', color: 'from-blue-500/10 to-cyan-500/10 text-blue-600' },
-                    { icon: 'group', text: 'הילדים שלי רבים כל הזמן', color: 'from-amber-500/10 to-yellow-500/10 text-amber-600' },
+                    { text: 'הילד שלי מתקשה להירדם בלילה', emoji: '🌙', bg: 'bg-indigo-50/70 border-indigo-100 hover:bg-indigo-50 hover:border-indigo-200' },
+                    { text: 'איך מתמודדים עם התפרצויות זעם?', emoji: '🌋', bg: 'bg-rose-50/70 border-rose-100 hover:bg-rose-50 hover:border-rose-200' },
+                    { text: 'מתלבטים לגבי זמן מסך', emoji: '📱', bg: 'bg-sky-50/70 border-sky-100 hover:bg-sky-50 hover:border-sky-200' },
+                    { text: 'הילדים רבים ביניהם ואני לא יודע/ת מה לעשות', emoji: '🤝', bg: 'bg-amber-50/70 border-amber-100 hover:bg-amber-50 hover:border-amber-200' },
                   ].map((s, i) => (
                     <button
                       key={i}
@@ -569,10 +597,11 @@ export default function ChatPage() {
                         await sendMessage(s.text)
                       }}
                       disabled={sending}
-                      className={`flex items-center gap-3 px-4 py-3 bg-gradient-to-l ${s.color} rounded-xl text-right hover:shadow-md active:scale-[0.97] transition-all duration-200 disabled:opacity-50 group`}
+                      className={`suggestion-chip flex items-center gap-3.5 w-full px-4 py-3.5 ${s.bg} border rounded-2xl text-right active:scale-[0.97] transition-all duration-200 disabled:opacity-50 group hover:shadow-md`}
                     >
-                      <span className="material-symbols-rounded text-xl opacity-70 group-hover:opacity-100 transition-opacity">{s.icon}</span>
-                      <span className="text-sm font-medium text-text-main flex-1">{s.text}</span>
+                      <span className="text-xl flex-shrink-0 group-hover:scale-110 transition-transform duration-200">{s.emoji}</span>
+                      <span className="text-[13.5px] font-medium text-text-main dark:text-gray-200 flex-1 leading-snug">{s.text}</span>
+                      <span className="material-symbols-rounded text-gray-300 text-base group-hover:text-primary/60 group-hover:translate-x-[-3px] transition-all duration-200">arrow_back</span>
                     </button>
                   ))}
                 </div>
@@ -580,32 +609,33 @@ export default function ChatPage() {
               </div>
             ) : (
               /* ---- Messages list ---- */
-              <div className="max-w-3xl mx-auto space-y-5">
-                {messages.map((msg) => {
+              <div className="max-w-3xl mx-auto space-y-6">
+                {messages.map((msg, idx) => {
                   const isUser = msg.role === 'user'
+                  const isFirst = idx === 0
+                  const isLastAI = !isUser && (idx === messages.length - 1 || messages[idx + 1]?.role === 'user')
                   return (
-                    <div key={msg.id} className={`flex ${isUser ? 'justify-end' : 'justify-start'} gap-3`}>
+                    <div key={msg.id} className={`flex ${isUser ? 'justify-end' : 'justify-start'} gap-3 msg-entrance`} style={{ animationDelay: `${Math.min(idx * 50, 300)}ms` }}>
                       {/* AI avatar */}
                       {!isUser && (
-                        <div className="shrink-0 size-9 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-md mt-1">
-                          <span className="material-symbols-outlined text-white text-base">psychology</span>
+                        <div className="shrink-0 size-9 rounded-2xl bg-gradient-to-br from-primary via-purple-500 to-pink-400 flex items-center justify-center shadow-lg shadow-primary/20 mt-1">
+                          <span className="material-symbols-outlined text-white text-base" style={{ fontVariationSettings: "'FILL' 1" }}>psychology</span>
                         </div>
                       )}
 
-                      <div className={`max-w-[85%] ${isUser ? 'ml-auto' : ''}`}>
+                      <div className={`max-w-[82%] ${isUser ? 'ml-auto' : ''}`}>
                         {isUser ? (
-                          /* User bubble */
-                          <div className="bg-primary text-white px-5 py-3 rounded-2xl rounded-tl-none shadow-md shadow-primary/15">
+                          /* User bubble — warm, approachable */
+                          <div className="bg-gradient-to-l from-primary to-purple-500 text-white px-5 py-3.5 rounded-2xl rounded-tl-md shadow-lg shadow-primary/15">
                             <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                           </div>
                         ) : (
-                          /* AI card */
-                          <div className="relative bg-white dark:bg-surface-dark rounded-2xl shadow-md overflow-hidden slide-in-right">
-                            {/* Rainbow top bar */}
-                            <div className="h-0.5 bg-gradient-to-r from-primary/40 via-purple-400/40 to-pink-400/40" />
-                            <div className="p-4 md:p-5">
+                          /* AI card — clean, trustworthy, warm */
+                          <div className="relative bg-white dark:bg-surface-dark rounded-2xl rounded-tr-md shadow-md shadow-gray-200/60 dark:shadow-none hover:shadow-lg transition-shadow duration-300 overflow-hidden ai-card-enter border border-gray-100 dark:border-gray-700/50">
+                            <div className="h-[3px] bg-gradient-to-r from-primary/30 via-purple-400/30 to-pink-300/30" />
+                            <div className="p-5 md:p-6">
                               <div
-                                className={`text-sm text-text-main dark:text-gray-200 leading-relaxed prose-sm${childAlreadySelected ? ' child-selected' : ''}`}
+                                className={`text-[14px] text-text-main dark:text-gray-200 leading-[1.8] prose-sm${childAlreadySelected ? ' child-selected' : ''}`}
                                 dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }}
                                 onClick={(e) => {
                                   const btn = e.target.closest('.child-select-btn')
@@ -613,6 +643,48 @@ export default function ChatPage() {
                                     const childName = btn.dataset.child
                                     if (childName && !sending && !childAlreadySelected) {
                                       handleChildSelect(childName)
+                                    }
+                                    return
+                                  }
+                                  // Add child trait selection
+                                  const traitBtn = e.target.closest('.add-child-trait')
+                                  if (traitBtn) {
+                                    const card = traitBtn.closest('.add-child-card')
+                                    if (card) {
+                                      card.querySelectorAll('.add-child-trait').forEach(b => b.classList.remove('active'))
+                                      traitBtn.classList.add('active')
+                                      const confirmBtn = card.querySelector('.add-child-confirm')
+                                      if (confirmBtn) confirmBtn.dataset.personality = traitBtn.dataset.trait
+                                    }
+                                    return
+                                  }
+                                  // Add child confirm
+                                  const addChildBtn = e.target.closest('.add-child-confirm')
+                                  if (addChildBtn) {
+                                    const { name, age, personality } = addChildBtn.dataset
+                                    if (name) {
+                                      const now = new Date()
+                                      const birthYear = now.getFullYear() - parseInt(age || '3', 10)
+                                      const birthDate = new Date(birthYear, now.getMonth(), 1).toISOString()
+                                      api.addChild({ name, birthDate, gender: 'boy', personality: personality || 'calm' })
+                                        .then((updatedChild) => {
+                                          const currentUser = useAuthStore.getState().user
+                                          if (currentUser) {
+                                            useAuthStore.setState({
+                                              user: { ...currentUser, children: [...(currentUser.children || []), { name, birthDate, gender: 'boy', personality: personality || 'calm' }] }
+                                            })
+                                          }
+                                          const card = addChildBtn.closest('.add-child-card')
+                                          if (card) {
+                                            card.innerHTML = `<div class="add-child-success"><span class="material-symbols-rounded">check_circle</span> ${name} נוסף/ה בהצלחה!</div>`
+                                          }
+                                        })
+                                        .catch(() => {
+                                          const card = addChildBtn.closest('.add-child-card')
+                                          if (card) {
+                                            card.innerHTML = `<div class="add-child-error"><span class="material-symbols-rounded">error</span> שגיאה בהוספה, נסו שוב</div>`
+                                          }
+                                        })
                                     }
                                     return
                                   }
@@ -626,32 +698,33 @@ export default function ChatPage() {
                                 }}
                               />
                             </div>
-                            {/* Actions */}
-                            <div className="flex items-center gap-1 px-4 pb-3">
+                            {/* Actions — visible on mobile, hover on desktop */}
+                            <div className="flex items-center gap-1 px-5 pb-4 pt-1 border-t border-gray-50 dark:border-gray-800 md:opacity-0 md:hover:opacity-100 md:focus-within:opacity-100 transition-opacity duration-200 action-bar">
                               <button
                                 onClick={() => handleCopy(msg.content, msg.id)}
-                                className="size-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors"
+                                className="size-8 flex items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                                 title="העתק"
                               >
-                                <span className="material-symbols-outlined text-gray-400 text-base">
-                                  {copiedId === msg.id ? 'check' : 'content_copy'}
+                                <span className="material-symbols-outlined text-gray-400 text-[15px]">
+                                  {copiedId === msg.id ? 'check_circle' : 'content_copy'}
                                 </span>
                               </button>
                               <button
                                 onClick={() => handleLike(msg.id)}
-                                className="size-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors"
+                                className="size-8 flex items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                                 title="אהבתי"
                               >
                                 <span
-                                  className={`material-symbols-outlined text-base ${
-                                    likedIds.has(msg.id) ? 'text-red-500' : 'text-gray-400'
+                                  className={`material-symbols-outlined text-[15px] transition-colors ${
+                                    likedIds.has(msg.id) ? 'text-pink-500' : 'text-gray-400'
                                   }`}
+                                  style={likedIds.has(msg.id) ? { fontVariationSettings: "'FILL' 1" } : {}}
                                 >
-                                  {likedIds.has(msg.id) ? 'favorite' : 'favorite_border'}
+                                  favorite
                                 </span>
                               </button>
                               {msg.timestamp && (
-                                <span className="ml-auto text-[11px] text-gray-300">{formatTime(msg.timestamp)}</span>
+                                <span className="ml-auto text-[11px] text-gray-300 dark:text-gray-600">{formatTime(msg.timestamp)}</span>
                               )}
                             </div>
                           </div>
@@ -659,35 +732,36 @@ export default function ChatPage() {
 
                         {/* Timestamp for user messages */}
                         {isUser && msg.timestamp && (
-                          <p className="text-[11px] text-gray-400 mt-1 px-1">{formatTime(msg.timestamp)}</p>
+                          <p className="text-[11px] text-gray-400 mt-1.5 px-1 text-left">{formatTime(msg.timestamp)}</p>
                         )}
                       </div>
-
-                      {/* No spacer needed - justify-end handles user alignment */}
                     </div>
                   )
                 })}
 
-                {/* Streaming AI response */}
+                {/* Streaming AI response — empathetic thinking state */}
                 {sending && (
-                  <div className="flex items-start gap-3">
-                    <div className="shrink-0 size-9 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-md mt-1">
-                      <span className="material-symbols-outlined text-white text-base">psychology</span>
+                  <div className="flex items-start gap-3 msg-entrance">
+                    <div className="shrink-0 size-9 rounded-2xl bg-gradient-to-br from-primary via-purple-500 to-pink-400 flex items-center justify-center shadow-lg shadow-primary/20 mt-1 avatar-breathing">
+                      <span className="material-symbols-outlined text-white text-base" style={{ fontVariationSettings: "'FILL' 1" }}>psychology</span>
                     </div>
-                    <div className="max-w-[85%]">
-                      <div className="relative bg-white dark:bg-surface-dark rounded-2xl shadow-md overflow-hidden slide-in-right">
-                        <div className="h-0.5 bg-gradient-to-r from-primary/40 via-purple-400/40 to-pink-400/40" />
-                        <div className="p-4 md:p-5">
+                    <div className="max-w-[82%]">
+                      <div className="relative bg-white dark:bg-surface-dark rounded-2xl rounded-tr-md shadow-md shadow-gray-200/60 dark:shadow-none overflow-hidden ai-card-enter border border-gray-100 dark:border-gray-700/50">
+                        <div className="h-[3px] bg-gradient-to-r from-primary/30 via-purple-400/30 to-pink-300/30" />
+                        <div className="p-5 md:p-6">
                           {streamingContent ? (
                             <div
-                              className="text-sm text-text-main dark:text-gray-200 leading-relaxed prose-sm streaming-cursor"
+                              className="text-[14px] text-text-main dark:text-gray-200 leading-[1.8] prose-sm streaming-cursor"
                               dangerouslySetInnerHTML={{ __html: renderMarkdown(streamingContent) }}
                             />
                           ) : (
-                            <div className="flex items-center gap-1.5">
-                              <span className="typing-dot size-2 bg-gray-400 rounded-full" style={{ animationDelay: '0ms' }} />
-                              <span className="typing-dot size-2 bg-gray-400 rounded-full" style={{ animationDelay: '150ms' }} />
-                              <span className="typing-dot size-2 bg-gray-400 rounded-full" style={{ animationDelay: '300ms' }} />
+                            <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-1.5">
+                                <span className="typing-dot size-2 bg-primary/60 rounded-full" style={{ animationDelay: '0ms' }} />
+                                <span className="typing-dot size-2 bg-primary/60 rounded-full" style={{ animationDelay: '150ms' }} />
+                                <span className="typing-dot size-2 bg-primary/60 rounded-full" style={{ animationDelay: '300ms' }} />
+                              </div>
+                              <span className="text-xs text-text-muted thinking-text">חושבת על זה...</span>
                             </div>
                           )}
                         </div>
@@ -699,55 +773,64 @@ export default function ChatPage() {
             )}
           </div>
 
+          {/* Scroll to bottom button */}
+          {showScrollBtn && messages.length > 0 && (
+            <button
+              onClick={() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' }) }}
+              className="absolute bottom-36 left-1/2 -translate-x-1/2 z-20 size-10 flex items-center justify-center rounded-full bg-white dark:bg-surface-dark shadow-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 transition-all duration-200 anim-fade-in"
+            >
+              <span className="material-symbols-rounded text-primary text-lg">keyboard_arrow_down</span>
+            </button>
+          )}
+
           {/* ---- INPUT AREA ---- */}
           <div className="absolute bottom-0 inset-x-0 z-20 anim-fade-in-up">
-            {/* Gradient fade */}
-            <div className="h-8 bg-gradient-to-t from-chat-bg dark:from-background-dark to-transparent pointer-events-none" />
+            {/* Gradient fade — larger for more breathing room */}
+            <div className="h-12 bg-gradient-to-t from-chat-bg dark:from-background-dark to-transparent pointer-events-none" />
 
-            <div className="bg-chat-bg dark:bg-background-dark px-4 md:px-8 pb-4">
+            <div className="bg-chat-bg dark:bg-background-dark px-4 md:px-8 pb-5">
               <form
                 onSubmit={handleSend}
-                className="max-w-3xl mx-auto relative bg-white dark:bg-surface-dark rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl focus-within:border-primary/40 focus-within:shadow-primary/10 transition-all duration-200"
+                className="max-w-3xl mx-auto relative bg-white dark:bg-surface-dark rounded-2xl border border-gray-200 dark:border-gray-700 shadow-lg shadow-gray-200/50 dark:shadow-none focus-within:border-primary/40 focus-within:shadow-xl focus-within:shadow-primary/8 transition-all duration-300"
               >
-                <div className="flex items-end gap-2 p-2">
-                  {/* Attach button */}
-                  <button
-                    type="button"
-                    className="shrink-0 size-10 flex items-center justify-center rounded-xl hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600"
-                  >
-                    <span className="material-symbols-outlined text-xl">attach_file</span>
-                  </button>
-
+                <div className="flex items-end gap-2 p-2.5">
                   {/* Textarea */}
                   <textarea
                     ref={textareaRef}
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="מה תרצו לשאול?"
+                    placeholder="ספרו לי מה מטריד אתכם..."
                     rows={1}
-                    className="flex-1 resize-none py-2.5 px-1 text-sm text-text-main dark:text-gray-200 placeholder:text-gray-400 bg-transparent outline-none leading-relaxed max-h-40"
+                    className="flex-1 resize-none py-2.5 px-2 text-sm text-text-main dark:text-gray-200 placeholder:text-gray-400/70 bg-transparent outline-none leading-relaxed max-h-40"
                     dir="rtl"
                   />
 
-                  {/* Send button */}
+                  {/* Send button — grows slightly when active */}
                   <button
                     type="submit"
                     disabled={!inputText.trim() || sending}
-                    className="shrink-0 size-10 flex items-center justify-center rounded-xl bg-primary text-white shadow-md shadow-primary/25 hover:shadow-lg hover:brightness-110 disabled:opacity-40 disabled:shadow-none transition-all duration-200"
+                    className={`shrink-0 size-10 flex items-center justify-center rounded-xl transition-all duration-300 ${
+                      inputText.trim() && !sending
+                        ? 'bg-gradient-to-l from-primary to-purple-500 text-white shadow-lg shadow-primary/30 hover:shadow-xl hover:scale-105'
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-default'
+                    }`}
                   >
                     <span className="material-symbols-outlined text-xl" style={{ transform: 'scaleX(-1)' }}>
-                      send
+                      {sending ? 'more_horiz' : 'send'}
                     </span>
                   </button>
                 </div>
               </form>
 
-              {/* Disclaimer */}
-              <p className="max-w-3xl mx-auto text-center text-[11px] text-gray-400 mt-2 leading-relaxed">
-                מבוסס AI - אינו מחליף ייעוץ מקצועי.
-                <span className="text-red-400 font-medium"> במצב חירום חייגו 1201</span>
-              </p>
+              {/* Disclaimer — softer, less intrusive */}
+              <div className="max-w-3xl mx-auto flex items-center justify-center gap-1.5 mt-3">
+                <span className="material-symbols-rounded text-gray-300 text-xs">info</span>
+                <p className="text-[11px] text-gray-400 leading-relaxed">
+                  מבוסס AI - אינו מחליף ייעוץ מקצועי.
+                  <span className="text-rose-400 font-semibold"> במצב חירום חייגו 1201</span>
+                </p>
+              </div>
             </div>
           </div>
         </main>
@@ -886,42 +969,108 @@ export default function ChatPage() {
               </button>
             </div>
 
-            {/* Settings */}
-            <Link
-              to="/settings"
-              className="flex items-center justify-center gap-2 px-4 py-3 text-sm text-text-main dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors no-underline border-t border-gray-100 dark:border-gray-800"
-            >
-              <span className="material-symbols-outlined text-lg text-gray-400">settings</span>
-              הגדרות
-            </Link>
+            {/* Settings + About links */}
+            <div className="flex border-t border-gray-100 dark:border-gray-800">
+              <Link
+                to="/settings"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm text-text-main dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors no-underline"
+              >
+                <span className="material-symbols-outlined text-lg text-gray-400">settings</span>
+                הגדרות
+              </Link>
+              <div className="w-px bg-gray-100 dark:bg-gray-800" />
+              <Link
+                to="/about"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm text-text-main dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors no-underline"
+              >
+                <span className="material-symbols-outlined text-lg text-gray-400">group</span>
+                קצת עלינו
+              </Link>
+            </div>
           </div>
         </aside>
 
       {/* ---- Inline styles for typing animation ---- */}
       <style>{`
-        @keyframes slideInRight {
-          0% { opacity: 0; transform: translateX(40px); }
+        /* ---- Message entrance animation ---- */
+        @keyframes msgEntrance {
+          0% { opacity: 0; transform: translateY(12px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        .msg-entrance {
+          animation: msgEntrance 0.4s ease-out both;
+        }
+
+        /* ---- AI card entrance ---- */
+        @keyframes aiCardEnter {
+          0% { opacity: 0; transform: translateX(16px); }
           100% { opacity: 1; transform: translateX(0); }
         }
-        .slide-in-right {
-          animation: slideInRight 0.5s ease-out forwards;
+        .ai-card-enter {
+          animation: aiCardEnter 0.45s ease-out forwards;
         }
+
+        /* ---- Avatar breathing — creates sense of presence ---- */
+        @keyframes avatarBreathing {
+          0%, 100% { transform: scale(1); box-shadow: 0 8px 30px -4px rgba(122, 90, 252, 0.2); }
+          50% { transform: scale(1.04); box-shadow: 0 12px 40px -4px rgba(122, 90, 252, 0.3); }
+        }
+        .avatar-breathing {
+          animation: avatarBreathing 3.5s ease-in-out infinite;
+        }
+
+        /* ---- Thinking text fade ---- */
+        @keyframes thinkingFade {
+          0%, 100% { opacity: 0.5; }
+          50% { opacity: 1; }
+        }
+        .thinking-text {
+          animation: thinkingFade 2s ease-in-out infinite;
+        }
+
         @keyframes typingBounce {
-          0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-          30% { transform: translateY(-6px); opacity: 1; }
+          0%, 60%, 100% { transform: translateY(0); opacity: 0.3; }
+          30% { transform: translateY(-5px); opacity: 1; }
         }
         .typing-dot {
           animation: typingBounce 1.2s ease-in-out infinite;
         }
+
+        /* ---- Action bar visibility on AI cards ---- */
+        .ai-card-enter:hover .action-bar,
+        .ai-card-enter:focus-within .action-bar {
+          opacity: 1 !important;
+        }
+
         .scrollbar-thin::-webkit-scrollbar {
           width: 4px;
         }
         .scrollbar-thin::-webkit-scrollbar-thumb {
-          background: rgba(0,0,0,0.1);
+          background: rgba(0,0,0,0.08);
           border-radius: 999px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+          background: rgba(0,0,0,0.15);
         }
         .scrollbar-thin::-webkit-scrollbar-track {
           background: transparent;
+        }
+
+        /* ---- Streaming cursor ---- */
+        .streaming-cursor::after {
+          content: '';
+          display: inline-block;
+          width: 2px;
+          height: 1em;
+          background: currentColor;
+          opacity: 0.6;
+          margin-right: 2px;
+          animation: cursorBlink 0.8s ease-in-out infinite;
+          vertical-align: text-bottom;
+        }
+        @keyframes cursorBlink {
+          0%, 100% { opacity: 0; }
+          50% { opacity: 0.6; }
         }
         .child-select-btn {
           display: inline-flex;
@@ -1016,31 +1165,148 @@ export default function ChatPage() {
           filter: grayscale(0.5);
         }
 
-        /* ---- Follow-up suggestion buttons ---- */
-        .followup-btn {
-          display: block;
-          width: 100%;
-          text-align: right;
-          padding: 10px 16px;
-          margin: 6px 0;
-          background: linear-gradient(135deg, #f0f4ff 0%, #faf5ff 100%);
-          border: 1.5px solid #e0e7ff;
-          border-radius: 14px;
-          font-size: 13px;
-          font-weight: 500;
-          color: #4338ca;
-          cursor: pointer;
-          transition: all 0.2s ease;
+        /* ---- Follow-up suggestion chips ---- */
+        .followup-container {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-top: 18px;
+          padding-top: 16px;
+          border-top: 1px solid #f0edf7;
           direction: rtl;
         }
+        .followup-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 9px 18px;
+          background: transparent;
+          border: 1.5px solid #d8d3e8;
+          border-radius: 100px;
+          font-size: 13px;
+          font-weight: 600;
+          color: #6d28d9;
+          cursor: pointer;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          direction: rtl;
+          white-space: nowrap;
+          line-height: 1.3;
+        }
+        .followup-btn::before {
+          content: '✦';
+          font-size: 10px;
+          opacity: 0.5;
+        }
         .followup-btn:hover {
-          background: linear-gradient(135deg, #e0e7ff 0%, #ede9fe 100%);
-          border-color: #a5b4fc;
-          transform: translateX(-3px);
-          box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
+          background: #7c3aed;
+          border-color: #7c3aed;
+          color: white;
+          box-shadow: 0 4px 14px rgba(124, 58, 237, 0.3);
+          transform: translateY(-2px);
+        }
+        .followup-btn:hover::before {
+          opacity: 1;
         }
         .followup-btn:active {
-          transform: scale(0.97);
+          transform: translateY(0) scale(0.96);
+          box-shadow: 0 2px 8px rgba(124, 58, 237, 0.2);
+        }
+
+        /* ---- Add child card ---- */
+        .add-child-card {
+          direction: rtl;
+          background: linear-gradient(135deg, #f3e8ff 0%, #ecfdf5 100%);
+          border: 1.5px solid #d8b4fe;
+          border-radius: 16px;
+          padding: 16px 18px;
+          margin: 12px 0;
+          box-shadow: 0 2px 12px rgba(139, 92, 246, 0.1);
+        }
+        .add-child-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 15px;
+          font-weight: 500;
+          color: #4c1d95;
+          margin-bottom: 12px;
+        }
+        .add-child-icon {
+          font-size: 22px;
+          color: #7c3aed;
+        }
+        .add-child-personalities {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-bottom: 14px;
+        }
+        .add-child-trait {
+          padding: 6px 14px;
+          border-radius: 20px;
+          border: 1.5px solid #d8b4fe;
+          background: white;
+          color: #6b21a8;
+          font-size: 13px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        .add-child-trait:hover {
+          background: #ede9fe;
+          border-color: #a78bfa;
+        }
+        .add-child-trait.active {
+          background: #7c3aed;
+          color: white;
+          border-color: #7c3aed;
+          box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
+        }
+        .add-child-confirm {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 8px 20px;
+          border-radius: 12px;
+          border: none;
+          background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+          color: white;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+        }
+        .add-child-confirm:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4);
+        }
+        .add-child-confirm:active {
+          transform: scale(0.96);
+        }
+        .add-child-success {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          color: #16a34a;
+          font-weight: 600;
+          font-size: 15px;
+          padding: 8px 0;
+        }
+        .add-child-success .material-symbols-rounded {
+          font-size: 22px;
+        }
+        .add-child-error {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          color: #dc2626;
+          font-weight: 500;
+          font-size: 14px;
+          padding: 8px 0;
+        }
+        .add-child-error .material-symbols-rounded {
+          font-size: 22px;
         }
       `}</style>
     </div>

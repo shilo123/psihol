@@ -19,11 +19,9 @@ export default function SettingsPage() {
   const logout = useAuthStore(s => s.logout)
   const updateUser = useAuthStore(s => s.updateUser)
 
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showAddChild, setShowAddChild] = useState(false)
   const [childForm, setChildForm] = useState({ name: '', birthDate: '', gender: 'boy', personality: '' })
   const [savingChild, setSavingChild] = useState(false)
-  const [emailNotifications, setEmailNotifications] = useState(true)
 
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof localStorage !== 'undefined') {
@@ -93,143 +91,58 @@ export default function SettingsPage() {
 
   return (
     <div dir="rtl" className="min-h-screen bg-background-light dark:bg-background-dark">
-      {/* ───────── Header ───────── */}
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 dark:bg-surface-dark/80 border-b border-border-color dark:border-gray-800 anim-fade-in-down">
-        <div className="max-w-[1200px] mx-auto flex items-center justify-between px-4 h-16">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2.5 no-underline">
-            <div className="size-9 rounded-xl bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center shadow-soft">
-              <span className="material-symbols-outlined text-white text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>psychology</span>
-            </div>
-            <span className="font-black text-lg text-text-main tracking-tight hidden sm:block">פסיכולוגית בכיס</span>
+      {/* ───────── Header — clean, mobile-first ───────── */}
+      <header className="sticky top-0 z-50 bg-white/80 dark:bg-surface-dark/80 backdrop-blur-md border-b border-gray-100/60 dark:border-gray-800/40">
+        <div className="max-w-3xl mx-auto flex items-center justify-between px-5 h-14">
+          <Link
+            to="/"
+            className="flex items-center gap-2 text-text-main no-underline hover:opacity-80 transition-opacity"
+          >
+            <span className="material-symbols-rounded text-primary text-lg">arrow_forward</span>
+            <span className="text-sm font-bold">חזרה לצ'אט</span>
           </Link>
-
-          {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-1">
-            <Link to="/" className="px-4 py-2 rounded-xl text-sm font-medium text-text-muted hover:text-primary hover:bg-primary-light/60 transition-all no-underline">
-              ראשי
-            </Link>
-            <span className="px-4 py-2 rounded-xl text-sm font-bold text-primary bg-primary-light cursor-default">
-              הגדרות
-            </span>
-          </nav>
-
-          {/* Right actions */}
-          <div className="flex items-center gap-2">
-            {/* Back to chat */}
-            <button
-              onClick={() => navigate('/')}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-white font-semibold text-sm shadow-md shadow-primary/25 hover:shadow-lg hover:brightness-110 transition-all duration-200"
-            >
-              <span className="material-symbols-outlined text-lg" style={{ transform: 'scaleX(-1)' }}>arrow_back</span>
-              חזרה לצ׳אט
-            </button>
-
-            {/* Avatar */}
-            <div className="size-9 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center text-white text-xs font-bold cursor-pointer">
+          <div className="flex items-center gap-2.5">
+            <span className="text-sm font-extrabold text-text-main hidden sm:block">הגדרות</span>
+            <div className="size-9 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center text-white text-xs font-bold shadow-sm">
               {initials}
             </div>
-
-            {/* Mobile hamburger */}
-            <button
-              className="md:hidden size-10 rounded-xl flex items-center justify-center text-text-muted hover:text-primary hover:bg-primary-light/60 transition-all"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              <span className="material-symbols-outlined text-xl">{mobileMenuOpen ? 'close' : 'menu'}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile menu */}
-        <div
-          className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${mobileMenuOpen ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'}`}
-        >
-          <div className="px-4 pb-4 space-y-1 border-t border-border-color pt-3">
-            <Link to="/" className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-text-muted hover:bg-primary-light/60 hover:text-primary transition-all no-underline">
-              <span className="material-symbols-outlined text-lg">home</span>
-              ראשי
-            </Link>
-            <span className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold text-primary bg-primary-light">
-              <span className="material-symbols-outlined text-lg">settings</span>
-              הגדרות
-            </span>
           </div>
         </div>
       </header>
 
-      {/* ───────── Main Content ───────── */}
-      <main className="max-w-[1024px] mx-auto py-8 px-4">
-        {/* Breadcrumbs */}
-        <nav className="flex items-center gap-2 text-sm text-text-muted mb-8 anim-fade-in anim-delay-1">
-          <Link to="/" className="hover:text-primary transition-colors no-underline text-text-muted">בית</Link>
-          <span className="material-symbols-outlined text-xs">chevron_left</span>
-          <span className="text-text-main font-medium">פרופיל והגדרות</span>
-        </nav>
+      {/* ───────── Main Content — single column, mobile-first ───────── */}
+      <main className="max-w-3xl mx-auto py-6 px-4 sm:px-5 space-y-5">
 
-        {/* 2-col grid */}
-        <div className="grid lg:grid-cols-12 gap-6">
-
-          {/* ═══════ Right column ═══════ */}
-          <div className="lg:col-span-8 space-y-6">
-
-            {/* ── Profile Card ── */}
-            <div className="bg-white dark:bg-surface-dark rounded-2xl border border-border-color dark:border-gray-700 shadow-soft overflow-hidden anim-fade-in-up anim-delay-1">
-              {/* Gradient banner */}
-              <div className="h-28 bg-gradient-to-l from-primary via-purple-500 to-indigo-500 relative">
-                <div className="absolute inset-0 opacity-20">
-                  <div className="absolute top-4 right-12 size-16 rounded-full bg-white/20"></div>
-                  <div className="absolute bottom-2 left-20 size-10 rounded-full bg-white/15"></div>
-                  <div className="absolute top-6 left-1/3 size-8 rounded-full bg-white/10"></div>
-                </div>
-              </div>
-
-              <div className="px-6 pb-6 -mt-14">
-                <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
-                  {/* Avatar */}
-                  <div className="relative group">
-                    <div className="size-28 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center text-white text-3xl font-black ring-4 ring-white shadow-lg">
-                      {initials}
-                    </div>
-                    <button className="absolute bottom-1 right-1 size-8 rounded-full bg-white shadow-md border border-border-color flex items-center justify-center text-text-muted hover:text-primary hover:border-primary transition-all group-hover:scale-110">
-                      <span className="material-symbols-outlined text-sm">photo_camera</span>
-                    </button>
+            {/* ── Profile Card — compact, warm ── */}
+            <div className="bg-white dark:bg-surface-dark rounded-3xl shadow-lg shadow-primary/5 border border-gray-100 dark:border-gray-700 overflow-hidden">
+              <div className="h-20 bg-gradient-to-l from-primary/80 via-purple-500/80 to-pink-400/80" />
+              <div className="px-5 pb-5 -mt-10">
+                <div className="flex items-end gap-4">
+                  <div className="size-20 rounded-2xl bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center text-white text-2xl font-black ring-4 ring-white shadow-lg flex-shrink-0">
+                    {initials}
                   </div>
-
-                  {/* Info */}
-                  <div className="flex-1 pt-2">
-                    <h1 className="font-black text-2xl text-text-main leading-tight">{user?.parentName || 'משתמש'}</h1>
-                    <p className="text-text-muted text-sm mt-0.5">{user?.email || ''}</p>
-                    <div className="flex flex-wrap items-center gap-2 mt-3">
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium border border-emerald-200">
-                        <span className="size-1.5 rounded-full bg-emerald-500"></span>
-                        מחובר/ת
-                      </span>
-                      {joinDate && (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 text-text-muted text-xs font-medium border border-gray-200">
-                          <span className="material-symbols-outlined text-xs">calendar_month</span>
-                          הצטרפות: {joinDate}
-                        </span>
-                      )}
-                    </div>
+                  <div className="flex-1 min-w-0 pt-12">
+                    <h1 className="font-extrabold text-xl text-text-main leading-tight truncate">{user?.parentName || 'משתמש'}</h1>
+                    <p className="text-text-muted text-sm truncate">{user?.email || ''}</p>
                   </div>
-
-                  {/* Edit button */}
-                  <button className="self-start sm:self-end px-5 py-2.5 rounded-xl border border-border-color text-sm font-medium text-text-main hover:border-primary hover:text-primary hover:bg-primary-light/40 transition-all flex items-center gap-2">
-                    <span className="material-symbols-outlined text-base">edit</span>
-                    עריכה
-                  </button>
                 </div>
+                {joinDate && (
+                  <div className="flex items-center gap-2 mt-4 pt-3 border-t border-gray-100 dark:border-gray-800">
+                    <span className="material-symbols-rounded text-text-muted text-sm">calendar_month</span>
+                    <span className="text-xs text-text-muted">הצטרפות: {joinDate}</span>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* ── Children Management ── */}
-            <div className="bg-white dark:bg-surface-dark rounded-2xl border border-border-color dark:border-gray-700 shadow-soft p-6 anim-fade-in-up anim-delay-2">
+            <div className="bg-white dark:bg-surface-dark rounded-3xl shadow-lg shadow-primary/5 border border-gray-100 dark:border-gray-700 p-5 sm:p-6">
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-xl bg-primary-light flex items-center justify-center">
+                  <div className="size-10 rounded-2xl bg-primary/10 flex items-center justify-center">
                     <span className="material-symbols-outlined text-primary text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>child_care</span>
                   </div>
-                  <h2 className="font-bold text-lg text-text-main">הילדים שלי</h2>
+                  <h2 className="font-extrabold text-lg text-text-main">הילדים שלי</h2>
                 </div>
                 <button
                   onClick={() => setShowAddChild(!showAddChild)}
@@ -373,8 +286,8 @@ export default function SettingsPage() {
             </div>
 
             {/* ── Subscription Card ── */}
-            <div className="bg-white dark:bg-surface-dark rounded-2xl border border-border-color dark:border-gray-700 shadow-soft overflow-hidden anim-fade-in-up anim-delay-3">
-              <div className="p-6">
+            <div className="bg-white dark:bg-surface-dark rounded-3xl shadow-lg shadow-primary/5 border border-gray-100 dark:border-gray-700 overflow-hidden">
+              <div className="p-5 sm:p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <div className="size-10 rounded-xl bg-amber-50 flex items-center justify-center">
@@ -414,7 +327,7 @@ export default function SettingsPage() {
             </div>
 
             {/* ── Emergency Resources ── */}
-            <div className="bg-red-50 dark:bg-red-900/10 rounded-2xl border border-red-200/50 p-5 anim-fade-in-up anim-delay-4">
+            <div className="bg-red-50/80 dark:bg-red-900/10 rounded-3xl border border-red-200/40 p-5">
               <div className="flex items-center gap-2.5 mb-3">
                 <span className="material-symbols-rounded text-red-500 text-xl">emergency</span>
                 <h3 className="font-bold text-red-700 text-sm">קווים חמים</h3>
@@ -430,42 +343,17 @@ export default function SettingsPage() {
                 </a>
               </div>
             </div>
-          </div>
-
-          {/* ═══════ Left column ═══════ */}
-          <div className="lg:col-span-4 space-y-6">
-
-            {/* ── Talk to human card ── */}
-            <div className="relative rounded-2xl overflow-hidden p-6 bg-gradient-to-br from-purple-600 via-primary to-indigo-600 text-white shadow-lg anim-slide-left anim-delay-2">
-              {/* Decorative blobs */}
-              <div className="absolute top-0 left-0 size-32 rounded-full bg-white/10 -translate-x-1/2 -translate-y-1/2"></div>
-              <div className="absolute bottom-0 right-0 size-24 rounded-full bg-white/5 translate-x-1/3 translate-y-1/3"></div>
-              <div className="absolute top-1/2 left-1/2 size-16 rounded-full bg-white/5"></div>
-
-              <div className="relative">
-                <div className="size-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center mb-4">
-                  <span className="material-symbols-outlined text-2xl text-white" style={{ fontVariationSettings: "'FILL' 1" }}>support_agent</span>
-                </div>
-                <h3 className="font-bold text-lg mb-1.5">צריכים לדבר עם מישהו?</h3>
-                <p className="text-white/80 text-sm leading-relaxed mb-4">
-                  צוות המומחים שלנו זמין עבורכם לייעוץ אישי ומקצועי
-                </p>
-                <button className="w-full py-3 rounded-xl bg-white text-primary font-bold text-sm hover:bg-white/90 transition-all shadow-sm">
-                  דברו עם מומחה
-                </button>
-              </div>
-            </div>
 
             {/* ── General Settings ── */}
-            <div className="bg-white dark:bg-surface-dark rounded-2xl border border-border-color dark:border-gray-700 shadow-soft overflow-hidden anim-fade-in-up anim-delay-3">
-              <div className="px-6 py-4 border-b border-border-color dark:border-gray-700">
-                <h3 className="font-bold text-text-main flex items-center gap-2">
-                  <span className="material-symbols-outlined text-lg text-text-muted">tune</span>
+            <div className="bg-white dark:bg-surface-dark rounded-3xl shadow-lg shadow-primary/5 border border-gray-100 dark:border-gray-700 overflow-hidden">
+              <div className="px-5 sm:px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+                <h3 className="font-extrabold text-text-main flex items-center gap-2.5">
+                  <span className="material-symbols-rounded text-lg text-primary">tune</span>
                   הגדרות כלליות
                 </h3>
               </div>
 
-              <div className="divide-y divide-border-color dark:divide-gray-700">
+              <div className="divide-y divide-gray-100 dark:divide-gray-700">
                 {/* Dark mode toggle */}
                 <div className="flex items-center justify-between px-6 py-4">
                   <div className="flex items-center gap-3">
@@ -482,23 +370,6 @@ export default function SettingsPage() {
                     className={`relative w-12 h-7 rounded-full transition-all duration-200 ${darkMode ? 'bg-primary' : 'bg-gray-300'}`}
                   >
                     <span className={`absolute top-0.5 size-6 rounded-full bg-white shadow-md transition-all duration-200 ${darkMode ? 'right-0.5' : 'right-[22px]'}`}></span>
-                  </button>
-                </div>
-
-                {/* Email notifications toggle */}
-                <div className="flex items-center justify-between px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <span className="material-symbols-outlined text-lg text-text-muted dark:text-gray-400">email</span>
-                    <div>
-                      <p className="text-sm font-medium text-text-main">התראות במייל</p>
-                      <p className="text-xs text-text-muted mt-0.5">קבלו טיפים וחדשות</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setEmailNotifications(!emailNotifications)}
-                    className={`relative w-12 h-7 rounded-full transition-all duration-200 ${emailNotifications ? 'bg-primary' : 'bg-gray-300'}`}
-                  >
-                    <span className={`absolute top-0.5 size-6 rounded-full bg-white shadow-md transition-all duration-200 ${emailNotifications ? 'right-0.5' : 'right-[22px]'}`}></span>
                   </button>
                 </div>
 
@@ -553,19 +424,12 @@ export default function SettingsPage() {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
       </main>
 
       {/* ───────── Footer ───────── */}
-      <footer className="border-t border-border-color dark:border-gray-800 bg-white/60 dark:bg-surface-dark/60 mt-12 anim-fade-in anim-delay-4">
-        <div className="max-w-[1024px] mx-auto px-4 py-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <footer className="border-t border-gray-100 dark:border-gray-800 bg-white/60 dark:bg-surface-dark/60 mt-8">
+        <div className="max-w-3xl mx-auto px-5 py-5 text-center">
           <p className="text-xs text-text-muted">© {new Date().getFullYear()} פסיכולוגית בכיס. כל הזכויות שמורות.</p>
-          <div className="flex items-center gap-4">
-            <a href="#" className="text-xs text-text-muted hover:text-primary transition-colors no-underline">תנאי שימוש</a>
-            <a href="#" className="text-xs text-text-muted hover:text-primary transition-colors no-underline">מדיניות פרטיות</a>
-            <a href="#" className="text-xs text-text-muted hover:text-primary transition-colors no-underline">צרו קשר</a>
-          </div>
         </div>
       </footer>
 

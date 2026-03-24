@@ -67,9 +67,33 @@ export function renderMarkdown(text) {
     .replace(/((?:<li.*?<\/li>\n?)+)/g, '<ul class="space-y-2 my-3 list-none p-0">$1</ul>')
     .replace(/\s*\[\[memory:[^\]]+\]\]/g, '')
     .replace(/\s*\[\[confidence:\d+\]\]/g, '')
-    // Follow-up suggestion buttons: [[followup:question text]]
-    .replace(/\[\[followup:([^\]]+)\]\]/g, (_, question) => {
-      return `<button class="followup-btn" data-followup="${question.trim()}">${question.trim()}</button>`
+    // Add child suggestion card: [[add_child:name:age:personality]]
+    .replace(/\[\[add_child:([^:\]]+):([^:\]]+):([^\]]+)\]\]/g, (_, name, age, personality) => {
+      const n = name.trim()
+      const a = age.trim()
+      const p = personality.trim()
+      const personalityLabels = { sensitive: 'רגיש/ה', stubborn: 'עקשן/ית', anxious: 'חרדתי/ת', energetic: 'אנרגטי/ת', calm: 'רגוע/ה' }
+      return `<div class="add-child-card" data-name="${n}" data-age="${a}" data-personality="${p}">
+        <div class="add-child-header">
+          <span class="material-symbols-rounded add-child-icon">person_add</span>
+          <span>להוסיף את <b>${n}</b> (בן ${a}) לזיכרון?</span>
+        </div>
+        <div class="add-child-personalities">
+          <button class="add-child-trait${p === 'stubborn' ? ' active' : ''}" data-trait="stubborn">עקשן/ית</button>
+          <button class="add-child-trait${p === 'sensitive' ? ' active' : ''}" data-trait="sensitive">רגיש/ה</button>
+          <button class="add-child-trait${p === 'anxious' ? ' active' : ''}" data-trait="anxious">חרדתי/ת</button>
+          <button class="add-child-trait${p === 'energetic' ? ' active' : ''}" data-trait="energetic">אנרגטי/ת</button>
+          <button class="add-child-trait${p === 'calm' ? ' active' : ''}" data-trait="calm">רגוע/ה</button>
+        </div>
+        <button class="add-child-confirm" data-name="${n}" data-age="${a}" data-personality="${p}">✓ כן, הוסיפי</button>
+      </div>`
+    })
+    // Follow-up suggestion buttons: [[followup:question text]] — collect into a styled container
+    .replace(/((?:\s*\[\[followup:[^\]]+\]\]\s*)+)/g, (block) => {
+      const buttons = [...block.matchAll(/\[\[followup:([^\]]+)\]\]/g)]
+        .map(m => `<button class="followup-btn" data-followup="${m[1].trim()}">${m[1].trim()}</button>`)
+        .join('');
+      return `<div class="followup-container">${buttons}</div>`;
     })
     .replace(/\n\n/g, '</p><p class="mt-3">')
     .replace(/\n/g, '<br>')
