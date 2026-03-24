@@ -160,7 +160,7 @@ export default function ChatPage() {
         window.google.accounts.id.renderButton(googleHiddenRef.current, {
           theme: 'outline',
           size: 'large',
-          width: 300,
+          width: 400,
           text: 'continue_with',
           locale: 'he',
         })
@@ -247,205 +247,216 @@ export default function ChatPage() {
     })
   }
 
+  /* ---- Collapsible email login ---- */
+  const [showEmailLogin, setShowEmailLogin] = useState(false)
+
   /* ================================================================ */
   /*  LOGIN OVERLAY                                                    */
   /* ================================================================ */
   if (!isLoggedIn) {
     return (
       <div dir="rtl" className="h-screen flex flex-col overflow-hidden bg-background-light">
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-primary/20 via-purple-500/10 to-pink-500/10 backdrop-blur-md overflow-y-auto py-8">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-primary/20 via-purple-500/10 to-pink-500/10 backdrop-blur-md overflow-y-auto py-6">
           {/* Decorative blobs */}
           <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
           <div className="absolute bottom-1/4 left-1/4 w-80 h-80 bg-purple-400/10 rounded-full blur-3xl" />
 
           {/* Glass card */}
-          <div className="relative z-10 w-full max-w-md mx-4 bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-8 text-center border border-white/50 anim-scale-in">
+          <div className="relative z-10 w-full max-w-md mx-4 bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-7 sm:p-8 text-center border border-white/50 anim-scale-in">
             {/* Logo */}
-            <div className="mx-auto mb-4 w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-xl shadow-primary/30 transform rotate-3 anim-pop-in anim-delay-1">
+            <div className="mx-auto mb-3 w-18 h-18 rounded-2xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-xl shadow-primary/30 transform rotate-3 anim-pop-in anim-delay-1" style={{ width: 72, height: 72 }}>
               <span className="material-symbols-outlined text-white text-4xl">psychology</span>
             </div>
-            <h1 className="text-3xl font-extrabold text-text-main mb-1 anim-fade-in-up anim-delay-2">פסיכולוגית בכיס</h1>
-            <p className="text-text-secondary mb-6 leading-relaxed text-sm anim-fade-in-up anim-delay-3">
-              העוזרת החכמה להורים ישראליים. הכוונה מקצועית מבוססת AI.
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-text-main mb-1 anim-fade-in-up anim-delay-2">פסיכולוגית בכיס</h1>
+            <p className="text-text-muted mb-5 leading-relaxed text-sm anim-fade-in-up anim-delay-3">
+              הדרך החכמה להתמודד עם אתגרי הורות - בכל רגע
             </p>
 
-            {/* Google Sign-In – real button overlaid transparently on custom button */}
-            <div className="relative w-full mb-4">
-              {/* Custom visible button (visual only) */}
-              <div className="w-full flex items-center justify-center gap-3 px-6 py-3.5 bg-white border-2 border-gray-200 rounded-2xl shadow-sm hover:shadow-md hover:border-primary/30 hover:bg-gradient-to-l hover:from-blue-50/50 hover:to-red-50/50 transition-all duration-300 group pointer-events-none">
+            {/* Value proposition chips */}
+            <div className="flex flex-wrap justify-center gap-2 mb-5 anim-fade-in-up anim-delay-3">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/8 rounded-full text-xs font-semibold text-primary">
+                <span className="material-symbols-rounded text-sm">psychology</span>
+                מבוסס פסיכולוגיה
+              </div>
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/8 rounded-full text-xs font-semibold text-emerald-600">
+                <span className="material-symbols-rounded text-sm">lock</span>
+                פרטי ומאובטח
+              </div>
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/8 rounded-full text-xs font-semibold text-amber-600">
+                <span className="material-symbols-rounded text-sm">bolt</span>
+                מענה מיידי 24/7
+              </div>
+            </div>
+
+            {/* Primary CTA — Google Sign-In */}
+            <div className="relative w-full mb-3">
+              <div className="w-full flex items-center justify-center gap-3 px-6 py-3.5 bg-white border-2 border-gray-200 rounded-2xl shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-300 pointer-events-none">
                 <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z" fill="#4285F4"/>
                   <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
                   <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
                   <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                 </svg>
-                <span className="font-semibold text-gray-700 group-hover:text-gray-900 transition-colors">המשך עם Google</span>
+                <span className="font-semibold text-gray-700">המשך עם Google</span>
               </div>
-              {/* Real Google button – transparent overlay so the actual click reaches Google's iframe */}
-              <div ref={googleHiddenRef} className="absolute inset-0 opacity-0 overflow-hidden rounded-2xl" style={{ minHeight: '100%' }} />
+              <div
+                ref={googleHiddenRef}
+                className="absolute inset-0 flex items-center justify-center overflow-hidden rounded-2xl"
+                style={{ opacity: 0.01, cursor: 'pointer' }}
+              />
             </div>
 
-            {/* Divider */}
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex-1 h-px bg-gray-200" />
-              <span className="text-xs text-text-secondary">או</span>
-              <div className="flex-1 h-px bg-gray-200" />
-            </div>
-
-            {/* Auth mode toggle */}
-            <div className="flex bg-gray-100 rounded-xl p-1 mb-4">
-              <button
-                onClick={() => { setAuthMode('login'); setAuthError('') }}
-                className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${authMode === 'login' ? 'bg-white shadow text-primary' : 'text-text-muted'}`}
-              >
-                כניסה
-              </button>
-              <button
-                onClick={() => { setAuthMode('signup'); setAuthError('') }}
-                className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${authMode === 'signup' ? 'bg-white shadow text-primary' : 'text-text-muted'}`}
-              >
-                הרשמה
-              </button>
-            </div>
-
-            {/* Error message */}
-            {authError && (
-              <div className="mb-3 p-2.5 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 text-right">
-                {authError}
-              </div>
-            )}
-
-            {authMode === 'login' ? (
-              /* ---- LOGIN FORM ---- */
-              <form onSubmit={handleLogin} className="space-y-3 text-right">
-                <div>
-                  <label className="block text-sm font-medium text-text-secondary mb-1">אימייל</label>
-                  <input
-                    type="email"
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    placeholder="האימייל שלך"
-                    dir="rtl"
-                    className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 outline-none transition-all text-right"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-text-secondary mb-1">סיסמה</label>
-                  <input
-                    type="password"
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    placeholder="הסיסמה שלך"
-                    dir="rtl"
-                    className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 outline-none transition-all text-right"
-                    required
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-l from-primary to-purple-600 rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 text-white font-semibold disabled:opacity-50"
-                >
-                  {loading ? (
-                    <span className="material-symbols-outlined animate-spin text-lg">progress_activity</span>
-                  ) : (
-                    <span className="material-symbols-outlined text-lg">login</span>
-                  )}
-                  <span>{loading ? 'מתחבר...' : 'כניסה'}</span>
-                </button>
-              </form>
-            ) : (
-              /* ---- SIGNUP FORM ---- */
-              <form onSubmit={handleSignup} className="space-y-3 text-right">
-                <div>
-                  <label className="block text-sm font-medium text-text-secondary mb-1">שם מלא</label>
-                  <input
-                    type="text"
-                    value={signupName}
-                    onChange={(e) => setSignupName(e.target.value)}
-                    placeholder="השם שלך"
-                    className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 outline-none transition-all text-right"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-text-secondary mb-1">אימייל</label>
-                  <input
-                    type="email"
-                    value={signupEmail}
-                    onChange={(e) => setSignupEmail(e.target.value)}
-                    placeholder="האימייל שלך"
-                    dir="rtl"
-                    className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 outline-none transition-all text-right"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-text-secondary mb-1">סיסמה</label>
-                  <input
-                    type="password"
-                    value={signupPassword}
-                    onChange={(e) => setSignupPassword(e.target.value)}
-                    placeholder="לפחות 6 תווים"
-                    dir="rtl"
-                    className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 outline-none transition-all text-right"
-                    required
-                    minLength={6}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-text-secondary mb-1">אימות סיסמה</label>
-                  <input
-                    type="password"
-                    value={signupConfirm}
-                    onChange={(e) => setSignupConfirm(e.target.value)}
-                    placeholder="הקלידו שוב את הסיסמה"
-                    dir="rtl"
-                    className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 outline-none transition-all text-right"
-                    required
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-l from-primary to-purple-600 rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 text-white font-semibold disabled:opacity-50"
-                >
-                  {loading ? (
-                    <span className="material-symbols-outlined animate-spin text-lg">progress_activity</span>
-                  ) : (
-                    <span className="material-symbols-outlined text-lg">person_add</span>
-                  )}
-                  <span>{loading ? 'נרשם...' : 'הרשמה'}</span>
-                </button>
-              </form>
-            )}
-
-            {/* Divider */}
-            <div className="flex items-center gap-3 my-4">
-              <div className="flex-1 h-px bg-gray-200" />
-              <span className="text-xs text-text-secondary">או</span>
-              <div className="flex-1 h-px bg-gray-200" />
-            </div>
-
-            {/* Guest button */}
+            {/* Secondary CTA — Try free */}
             <button
-              onClick={async () => {
-                await loginAsGuest()
-              }}
+              onClick={async () => { await loginAsGuest() }}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gray-100 hover:bg-gray-200 rounded-2xl transition-all duration-200 text-text-secondary font-medium disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-l from-primary to-purple-600 rounded-2xl shadow-lg shadow-primary/25 hover:shadow-xl hover:brightness-110 transition-all duration-200 text-white font-bold mb-4 disabled:opacity-50 active:scale-[0.98]"
             >
-              <span className="material-symbols-outlined text-lg">person_outline</span>
-              <span>כניסה כאורח (3 ימים)</span>
+              {loading ? (
+                <span className="material-symbols-rounded animate-spin text-lg">progress_activity</span>
+              ) : (
+                <span className="material-symbols-rounded text-lg">rocket_launch</span>
+              )}
+              <span>{loading ? 'נכנס...' : 'נסו בחינם'}</span>
             </button>
 
+            {/* Social proof */}
+            <div className="flex items-center justify-center gap-2 mb-4 anim-fade-in anim-delay-4">
+              <div className="flex -space-x-2 rtl:space-x-reverse">
+                <div className="size-7 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 border-2 border-white flex items-center justify-center text-white text-[10px] font-bold">מ</div>
+                <div className="size-7 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 border-2 border-white flex items-center justify-center text-white text-[10px] font-bold">ד</div>
+                <div className="size-7 rounded-full bg-gradient-to-br from-emerald-400 to-green-500 border-2 border-white flex items-center justify-center text-white text-[10px] font-bold">ש</div>
+              </div>
+              <span className="text-xs text-text-muted">
+                <b className="text-text-main">5,000+</b> הורים כבר משתמשים
+              </span>
+            </div>
+
+            {/* Collapsible email login */}
+            {!showEmailLogin ? (
+              <button
+                onClick={() => setShowEmailLogin(true)}
+                className="text-xs text-text-muted hover:text-primary transition-colors"
+              >
+                כניסה עם אימייל וסיסמה
+                <span className="material-symbols-rounded text-sm align-middle mr-1">expand_more</span>
+              </button>
+            ) : (
+              <div className="anim-fade-in-up">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="flex-1 h-px bg-gray-200" />
+                  <span className="text-xs text-text-muted">כניסה עם אימייל</span>
+                  <div className="flex-1 h-px bg-gray-200" />
+                </div>
+
+                {/* Auth mode toggle */}
+                <div className="flex bg-gray-100 rounded-xl p-1 mb-3">
+                  <button
+                    onClick={() => { setAuthMode('login'); setAuthError('') }}
+                    className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${authMode === 'login' ? 'bg-white shadow text-primary' : 'text-text-muted'}`}
+                  >
+                    כניסה
+                  </button>
+                  <button
+                    onClick={() => { setAuthMode('signup'); setAuthError('') }}
+                    className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${authMode === 'signup' ? 'bg-white shadow text-primary' : 'text-text-muted'}`}
+                  >
+                    הרשמה
+                  </button>
+                </div>
+
+                {authError && (
+                  <div className="mb-3 p-2.5 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 text-right">
+                    {authError}
+                  </div>
+                )}
+
+                {authMode === 'login' ? (
+                  <form onSubmit={handleLogin} className="space-y-3 text-right">
+                    <input
+                      type="email"
+                      value={loginEmail}
+                      onChange={(e) => setLoginEmail(e.target.value)}
+                      placeholder="אימייל"
+                      dir="rtl"
+                      className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 outline-none transition-all text-right text-sm"
+                      required
+                    />
+                    <input
+                      type="password"
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      placeholder="סיסמה"
+                      dir="rtl"
+                      className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 outline-none transition-all text-right text-sm"
+                      required
+                    />
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gray-900 rounded-xl transition-all duration-200 text-white font-semibold text-sm disabled:opacity-50 hover:bg-gray-800"
+                    >
+                      {loading ? <span className="material-symbols-rounded animate-spin text-lg">progress_activity</span> : null}
+                      <span>{loading ? 'מתחבר...' : 'כניסה'}</span>
+                    </button>
+                  </form>
+                ) : (
+                  <form onSubmit={handleSignup} className="space-y-3 text-right">
+                    <input
+                      type="text"
+                      value={signupName}
+                      onChange={(e) => setSignupName(e.target.value)}
+                      placeholder="שם מלא"
+                      className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 outline-none transition-all text-right text-sm"
+                      required
+                    />
+                    <input
+                      type="email"
+                      value={signupEmail}
+                      onChange={(e) => setSignupEmail(e.target.value)}
+                      placeholder="אימייל"
+                      dir="rtl"
+                      className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 outline-none transition-all text-right text-sm"
+                      required
+                    />
+                    <input
+                      type="password"
+                      value={signupPassword}
+                      onChange={(e) => setSignupPassword(e.target.value)}
+                      placeholder="סיסמה (לפחות 6 תווים)"
+                      dir="rtl"
+                      className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 outline-none transition-all text-right text-sm"
+                      required
+                      minLength={6}
+                    />
+                    <input
+                      type="password"
+                      value={signupConfirm}
+                      onChange={(e) => setSignupConfirm(e.target.value)}
+                      placeholder="אימות סיסמה"
+                      dir="rtl"
+                      className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 outline-none transition-all text-right text-sm"
+                      required
+                    />
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gray-900 rounded-xl transition-all duration-200 text-white font-semibold text-sm disabled:opacity-50 hover:bg-gray-800"
+                    >
+                      {loading ? <span className="material-symbols-rounded animate-spin text-lg">progress_activity</span> : null}
+                      <span>{loading ? 'נרשם...' : 'הרשמה'}</span>
+                    </button>
+                  </form>
+                )}
+              </div>
+            )}
+
             {/* Terms */}
-            <p className="mt-5 text-xs text-text-secondary/70 leading-relaxed">
+            <p className="mt-4 text-[11px] text-text-muted/60 leading-relaxed">
               בכניסה, את/ה מסכים/ה ל
-              <a href="#" className="text-primary hover:underline mx-1">תנאי השימוש</a>
+              <a href="#" className="text-primary hover:underline mx-0.5">תנאי השימוש</a>
               ול
-              <a href="#" className="text-primary hover:underline mx-1">מדיניות הפרטיות</a>
+              <a href="#" className="text-primary hover:underline mx-0.5">מדיניות הפרטיות</a>
             </p>
           </div>
         </div>
@@ -476,25 +487,35 @@ export default function ChatPage() {
         {/* -------------------------------------------------------- */}
         <main className="flex-1 flex flex-col min-w-0 relative bg-chat-bg dark:bg-background-dark">
           {/* Mini topbar inside chat area */}
-          <div className="shrink-0 h-12 px-4 flex items-center gap-3 z-10">
-            {/* Sidebar toggle */}
+          <div className="shrink-0 h-12 px-4 flex items-center gap-3 z-10 border-b border-gray-100/60 dark:border-gray-800/40">
+            {/* Sidebar toggle — more visible on mobile */}
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="md:hidden size-9 flex items-center justify-center rounded-lg hover:bg-white/60 dark:hover:bg-surface-dark/60 transition-colors"
+              className="md:hidden size-9 flex items-center justify-center rounded-xl bg-white/80 dark:bg-surface-dark/80 shadow-sm hover:shadow-md transition-all"
             >
-              <span className="material-symbols-outlined text-text-muted text-xl">menu</span>
+              <span className="material-symbols-rounded text-primary text-xl">menu</span>
             </button>
             {/* Logo - mobile only */}
             <div className="md:hidden flex items-center gap-2">
               <div className="size-7 bg-primary/10 rounded-lg flex items-center justify-center">
-                <span className="material-symbols-outlined text-primary text-base">psychology</span>
+                <span className="material-symbols-rounded text-primary text-base">psychology</span>
               </div>
               <span className="text-sm font-bold text-text-main dark:text-gray-200">פסיכולוגית בכיס</span>
             </div>
+            {/* Guest upgrade nudge */}
+            {isGuest && (
+              <button
+                onClick={() => { handleLogout(); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-l from-primary/10 to-purple-500/10 border border-primary/20 text-primary rounded-full text-xs font-bold mr-auto hover:bg-primary/15 transition-all"
+              >
+                <span className="material-symbols-rounded text-sm">diamond</span>
+                הירשמו לשמירת השיחות
+              </button>
+            )}
             {/* Temp chat indicator */}
-            {isTempChat && (
+            {isTempChat && !isGuest && (
               <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-bold mr-auto">
-                <span className="material-symbols-outlined text-sm">timer</span>
+                <span className="material-symbols-rounded text-sm">timer</span>
                 שיחה זמנית
               </div>
             )}
@@ -506,25 +527,54 @@ export default function ChatPage() {
               /* ---- Welcome / Empty state ---- */
               <div className="max-w-2xl mx-auto flex flex-col items-center justify-center min-h-full anim-fade-in">
                 {/* AI avatar */}
-                <div className="mb-6 relative anim-pop-in anim-delay-1">
-                  <div className="size-20 rounded-3xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-2xl shadow-primary/30">
-                    <span className="material-symbols-outlined text-white text-4xl">psychology</span>
+                <div className="mb-5 relative anim-pop-in anim-delay-1">
+                  <div className="size-16 sm:size-20 rounded-3xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-2xl shadow-primary/30">
+                    <span className="material-symbols-outlined text-white text-3xl sm:text-4xl">psychology</span>
                   </div>
-                  <div className="absolute -bottom-1 -right-1 size-5 bg-emerald-500 rounded-full border-2 border-white" />
+                  <div className="absolute -bottom-1 -right-1 size-4 sm:size-5 bg-emerald-500 rounded-full border-2 border-chat-bg" />
                 </div>
 
                 {/* Welcome card */}
-                <div className="relative bg-white dark:bg-surface-dark rounded-2xl shadow-lg w-full overflow-hidden mb-8 slide-in-right anim-fade-in-up anim-delay-2">
-                  {/* Rainbow bar */}
-                  <div className="h-1 bg-gradient-to-r from-primary via-purple-500 to-pink-500" />
-                  <div className="p-6 text-center">
-                    <h2 className="text-xl font-bold text-text-main mb-2">
-                      שלום{user?.parentName ? ` ${user.parentName}` : ''}! איך אוכל לעזור היום?
+                <div className="relative bg-white dark:bg-surface-dark rounded-2xl shadow-lg w-full overflow-hidden mb-5 anim-fade-in-up anim-delay-2">
+                  <div className="h-1 bg-gradient-to-r from-primary/60 via-purple-400/60 to-pink-400/60" />
+                  <div className="p-5 sm:p-6 text-center">
+                    <h2 className="text-lg sm:text-xl font-bold text-text-main mb-1.5">
+                      {user?.parentName && !isGuest ? `היי ${user.parentName}` : 'שלום'}! איך אוכל לעזור?
                     </h2>
-                    <p className="text-text-secondary text-sm leading-relaxed">
-                      אני כאן כדי לעזור לך עם כל שאלה הורית. ספרו לי מה מטריד אתכם.
+                    <p className="text-text-muted text-sm leading-relaxed">
+                      {user?.children?.length > 0
+                        ? `רוצה לדבר על ${user.children.map(c => c.name).join(', ')}? אני כאן בשבילך.`
+                        : 'אני כאן בשבילכם - שאלו כל שאלה על הורות, חינוך או התפתחות הילד.'
+                      }
                     </p>
                   </div>
+                </div>
+
+                {/* Quick suggestion chips */}
+                <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-2 anim-fade-in-up anim-delay-3">
+                  {[
+                    { icon: 'bedtime', text: 'הילד שלי לא נרדם בלילה', color: 'from-indigo-500/10 to-purple-500/10 text-indigo-600' },
+                    { icon: 'sentiment_frustrated', text: 'איך להתמודד עם התפרצויות זעם?', color: 'from-red-500/10 to-orange-500/10 text-red-500' },
+                    { icon: 'devices', text: 'כמה זמן מסך מותר לילד?', color: 'from-blue-500/10 to-cyan-500/10 text-blue-600' },
+                    { icon: 'group', text: 'הילדים שלי רבים כל הזמן', color: 'from-amber-500/10 to-yellow-500/10 text-amber-600' },
+                  ].map((s, i) => (
+                    <button
+                      key={i}
+                      onClick={async () => {
+                        setInputText('')
+                        if (!isTempChat && !currentConversation) {
+                          const conv = await createConversation(s.text.substring(0, 50))
+                          if (!conv) return
+                        }
+                        await sendMessage(s.text)
+                      }}
+                      disabled={sending}
+                      className={`flex items-center gap-3 px-4 py-3 bg-gradient-to-l ${s.color} rounded-xl text-right hover:shadow-md active:scale-[0.97] transition-all duration-200 disabled:opacity-50 group`}
+                    >
+                      <span className="material-symbols-rounded text-xl opacity-70 group-hover:opacity-100 transition-opacity">{s.icon}</span>
+                      <span className="text-sm font-medium text-text-main flex-1">{s.text}</span>
+                    </button>
+                  ))}
                 </div>
 
               </div>
@@ -552,7 +602,7 @@ export default function ChatPage() {
                           /* AI card */
                           <div className="relative bg-white dark:bg-surface-dark rounded-2xl shadow-md overflow-hidden slide-in-right">
                             {/* Rainbow top bar */}
-                            <div className="h-1 bg-gradient-to-r from-primary via-purple-500 to-pink-500" />
+                            <div className="h-0.5 bg-gradient-to-r from-primary/40 via-purple-400/40 to-pink-400/40" />
                             <div className="p-4 md:p-5">
                               <div
                                 className={`text-sm text-text-main dark:text-gray-200 leading-relaxed prose-sm${childAlreadySelected ? ' child-selected' : ''}`}
@@ -626,7 +676,7 @@ export default function ChatPage() {
                     </div>
                     <div className="max-w-[85%]">
                       <div className="relative bg-white dark:bg-surface-dark rounded-2xl shadow-md overflow-hidden slide-in-right">
-                        <div className="h-1 bg-gradient-to-r from-primary via-purple-500 to-pink-500" />
+                        <div className="h-0.5 bg-gradient-to-r from-primary/40 via-purple-400/40 to-pink-400/40" />
                         <div className="p-4 md:p-5">
                           {streamingContent ? (
                             <div
@@ -674,7 +724,7 @@ export default function ChatPage() {
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="ספרו לי מה מטריד אתכם..."
+                    placeholder="מה תרצו לשאול?"
                     rows={1}
                     className="flex-1 resize-none py-2.5 px-1 text-sm text-text-main dark:text-gray-200 placeholder:text-gray-400 bg-transparent outline-none leading-relaxed max-h-40"
                     dir="rtl"
@@ -695,7 +745,8 @@ export default function ChatPage() {
 
               {/* Disclaimer */}
               <p className="max-w-3xl mx-auto text-center text-[11px] text-gray-400 mt-2 leading-relaxed">
-                התשובות מבוססות על AI ואינן מחליפות ייעוץ מקצועי. במקרה חירום, פנו לגורם מקצועי.
+                מבוסס AI - אינו מחליף ייעוץ מקצועי.
+                <span className="text-red-400 font-medium"> במצב חירום חייגו 1201</span>
               </p>
             </div>
           </div>
@@ -753,13 +804,27 @@ export default function ChatPage() {
           {/* Conversations list */}
           <div className="flex-1 overflow-y-auto px-2 pb-4 scrollbar-thin">
             {grouped.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-center px-6">
-                <div className="size-16 bg-gray-100 rounded-2xl flex items-center justify-center mb-4">
-                  <span className="material-symbols-outlined text-gray-400 text-3xl">chat_bubble_outline</span>
+              <div className="flex flex-col items-center justify-center h-full text-center px-5">
+                <div className="size-16 bg-gradient-to-br from-primary/10 to-purple-500/10 rounded-2xl flex items-center justify-center mb-4">
+                  <span className="material-symbols-rounded text-primary text-3xl">chat_bubble</span>
                 </div>
-                <p className="text-sm text-text-secondary">
-                  אין שיחות עדיין.<br />התחילו שיחה חדשה!
+                <p className="text-sm font-bold text-text-main mb-1">
+                  אין שיחות עדיין
                 </p>
+                <p className="text-xs text-text-muted mb-4 leading-relaxed">
+                  התחילו שיחה חדשה או לחצו על אחת מההצעות
+                </p>
+                {/* Quick tips */}
+                <div className="w-full space-y-2">
+                  <div className="flex items-center gap-2.5 p-2.5 bg-white/60 dark:bg-surface-dark/60 rounded-xl text-right">
+                    <span className="material-symbols-rounded text-amber-500 text-lg">tips_and_updates</span>
+                    <span className="text-xs text-text-muted">נסו לשאול "איך לבנות שגרת שינה?"</span>
+                  </div>
+                  <div className="flex items-center gap-2.5 p-2.5 bg-white/60 dark:bg-surface-dark/60 rounded-xl text-right">
+                    <span className="material-symbols-rounded text-blue-500 text-lg">auto_awesome</span>
+                    <span className="text-xs text-text-muted">ככל שתספרו יותר, התשובות יהיו מדויקות יותר</span>
+                  </div>
+                </div>
               </div>
             ) : (
               grouped.map((group) => (

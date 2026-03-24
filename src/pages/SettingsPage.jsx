@@ -373,25 +373,61 @@ export default function SettingsPage() {
             </div>
 
             {/* ── Subscription Card ── */}
-            <div className="bg-white dark:bg-surface-dark rounded-2xl border border-border-color dark:border-gray-700 shadow-soft p-6 anim-fade-in-up anim-delay-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-xl bg-amber-50 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-amber-600 text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>card_membership</span>
-                  </div>
-                  <div>
-                    <h2 className="font-bold text-text-main">מנוי</h2>
-                    <div className="flex items-center gap-2 mt-0.5">
+            <div className="bg-white dark:bg-surface-dark rounded-2xl border border-border-color dark:border-gray-700 shadow-soft overflow-hidden anim-fade-in-up anim-delay-3">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="size-10 rounded-xl bg-amber-50 flex items-center justify-center">
+                      <span className="material-symbols-outlined text-amber-600 text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>card_membership</span>
+                    </div>
+                    <div>
+                      <h2 className="font-bold text-text-main">מנוי</h2>
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-gray-100 text-text-muted text-xs font-medium border border-gray-200">
                         בסיסי (חינם)
                       </span>
                     </div>
                   </div>
                 </div>
-                <button className="px-5 py-2.5 rounded-xl bg-gradient-to-l from-primary to-purple-500 text-white text-sm font-bold hover:shadow-lg hover:shadow-primary/25 transition-all flex items-center gap-2">
-                  <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
+                {/* Feature comparison */}
+                <div className="space-y-2.5 mb-5">
+                  {[
+                    { icon: 'chat', text: 'שיחות ללא הגבלה', free: true },
+                    { icon: 'auto_awesome', text: 'תשובות מותאמות אישית', free: true },
+                    { icon: 'history', text: 'שמירת היסטוריית שיחות', free: true },
+                    { icon: 'psychology', text: 'ייעוץ מעמיק ומפורט', free: false },
+                    { icon: 'family_restroom', text: 'תוכנית אישית לכל ילד', free: false },
+                    { icon: 'support_agent', text: 'שיחה עם מומחה אנושי', free: false },
+                  ].map((f, i) => (
+                    <div key={i} className={`flex items-center gap-2.5 text-sm ${f.free ? 'text-text-main' : 'text-text-muted'}`}>
+                      <span className={`material-symbols-rounded text-base ${f.free ? 'text-emerald-500' : 'text-gray-300'}`}>
+                        {f.free ? 'check_circle' : 'lock'}
+                      </span>
+                      {f.text}
+                    </div>
+                  ))}
+                </div>
+                <button className="w-full py-3 rounded-xl bg-gradient-to-l from-primary to-purple-500 text-white text-sm font-bold hover:shadow-lg hover:shadow-primary/25 transition-all flex items-center justify-center gap-2">
+                  <span className="material-symbols-rounded text-base">diamond</span>
                   שדרוג לפרימיום
                 </button>
+              </div>
+            </div>
+
+            {/* ── Emergency Resources ── */}
+            <div className="bg-red-50 dark:bg-red-900/10 rounded-2xl border border-red-200/50 p-5 anim-fade-in-up anim-delay-4">
+              <div className="flex items-center gap-2.5 mb-3">
+                <span className="material-symbols-rounded text-red-500 text-xl">emergency</span>
+                <h3 className="font-bold text-red-700 text-sm">קווים חמים</h3>
+              </div>
+              <div className="space-y-2 text-sm">
+                <a href="tel:1201" className="flex items-center justify-between p-2.5 bg-white/60 rounded-xl hover:bg-white transition-all no-underline">
+                  <span className="text-text-main font-medium">ער"ן - סיוע נפשי</span>
+                  <span className="text-primary font-bold">1201</span>
+                </a>
+                <a href="tel:118" className="flex items-center justify-between p-2.5 bg-white/60 rounded-xl hover:bg-white transition-all no-underline">
+                  <span className="text-text-main font-medium">עמותת אל"י - למניעת התעללות</span>
+                  <span className="text-primary font-bold">118</span>
+                </a>
               </div>
             </div>
           </div>
