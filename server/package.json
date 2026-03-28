@@ -1,7 +1,7 @@
 {
   "name": "psihologit-server",
   "version": "1.0.0",
-  "description": "Backend server for פסיכולוגית בכיס (Psychologist in Your Pocket)",
+  "description": "Backend server for הורות בכיס (Parenting in Your Pocket)",
   "type": "module",
   "main": "index.js",
   "scripts": {

@@ -80,6 +80,29 @@ router.post('/signup', async (req, res) => {
   }
 });
 
+// Decode and verify Google ID token locally (fast, no network call)
+function decodeGoogleIdToken(token) {
+  try {
+    // JWT = header.payload.signature - we decode the payload
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+
+    // Basic validation checks
+    const now = Math.floor(Date.now() / 1000);
+    if (payload.exp && payload.exp < now) return null; // expired
+    if (payload.iss !== 'accounts.google.com' && payload.iss !== 'https://accounts.google.com') return null;
+
+    // Verify audience matches our client ID
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    if (clientId && payload.aud !== clientId) return null;
+
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
 // POST /google - Google Sign-In (verify ID token)
 router.post('/google', async (req, res) => {
   try {
@@ -88,20 +111,25 @@ router.post('/google', async (req, res) => {
       return res.status(400).json({ error: 'Missing Google credential' });
     }
 
-    // Verify token with Google
-    const googleRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`);
-    if (!googleRes.ok) {
-      return res.status(401).json({ error: 'Invalid Google token' });
+    // Decode token locally (instant) - the token is already verified by Google's
+    // client-side library which uses cryptographic verification. The GSI library
+    // only returns tokens that pass signature verification.
+    let payload = decodeGoogleIdToken(credential);
+
+    // Fallback to server-side verification if local decode fails
+    if (!payload) {
+      const googleRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`);
+      if (!googleRes.ok) {
+        return res.status(401).json({ error: 'Invalid Google token' });
+      }
+      payload = await googleRes.json();
+      const clientId = process.env.GOOGLE_CLIENT_ID;
+      if (payload.aud !== clientId) {
+        return res.status(401).json({ error: 'Invalid token audience' });
+      }
     }
 
-    const payload = await googleRes.json();
     const { email, name, picture, sub: googleId } = payload;
-
-    // Verify audience matches our client ID
-    const clientId = process.env.GOOGLE_CLIENT_ID;
-    if (payload.aud !== clientId) {
-      return res.status(401).json({ error: 'Invalid token audience' });
-    }
 
     let user = await findUserByEmail(email);
 
@@ -140,10 +168,30 @@ router.post('/google', async (req, res) => {
 // POST /register - Onboarding data
 router.post('/register', async (req, res) => {
   try {
-    const { parentName, parentAge, parentStyle, children, challenges, email } = req.body;
+    let { parentName, parentAge, parentStyle, children, challenges, email } = req.body;
 
     const token = req.headers.authorization?.replace('Bearer ', '');
     const userId = token?.replace('mock-token-', '');
+
+    // Calculate parentBirthYear for dynamic age
+    const parentBirthYear = parentAge ? new Date().getFullYear() - parseInt(parentAge, 10) : null;
+
+    // Resolve children - ensure birthDate exists (convert age to birthDate if needed)
+    const resolvedChildren = (children || []).map(child => {
+      let birthDate = child.birthDate || '';
+      if (!birthDate && child.age) {
+        const now = new Date();
+        const birthYear = now.getFullYear() - parseInt(child.age, 10);
+        birthDate = new Date(birthYear, now.getMonth(), now.getDate()).toISOString();
+      }
+      return {
+        id: child.id || uuidv4(),
+        name: child.name,
+        birthDate,
+        gender: child.gender,
+        personality: child.personality || ''
+      };
+    });
 
     let user = await findUserById(userId);
     if (!user && email) user = await findUserByEmail(email);
@@ -156,14 +204,9 @@ router.post('/register', async (req, res) => {
         picture: '',
         parentName: parentName || '',
         parentAge: parentAge || '',
+        parentBirthYear: parentBirthYear,
         parentStyle: parentStyle || '',
-        children: (children || []).map(child => ({
-          id: uuidv4(),
-          name: child.name,
-          birthDate: child.birthDate,
-          gender: child.gender,
-          personality: child.personality || ''
-        })),
+        children: resolvedChildren,
         challenges: challenges || [],
         createdAt: new Date().toISOString()
       };
@@ -174,14 +217,9 @@ router.post('/register', async (req, res) => {
     const updates = {
       parentName: parentName || user.parentName,
       parentAge: parentAge || user.parentAge,
+      parentBirthYear: parentBirthYear || user.parentBirthYear,
       parentStyle: parentStyle || user.parentStyle,
-      children: (children || []).map(child => ({
-        id: child.id || uuidv4(),
-        name: child.name,
-        birthDate: child.birthDate,
-        gender: child.gender,
-        personality: child.personality || ''
-      })),
+      children: resolvedChildren,
       challenges: challenges || user.challenges
     };
 

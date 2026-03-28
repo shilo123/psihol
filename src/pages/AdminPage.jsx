@@ -52,7 +52,7 @@ function UserDetailPopup({ userId, onClose, onDelete, onSave }) {
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div
-        className="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto anim-scale-in"
+        className="relative bg-white rounded-3xl shadow-2xl w-[95vw] sm:w-full max-w-lg max-h-[90vh] overflow-y-auto anim-scale-in"
         onClick={e => e.stopPropagation()}
       >
         {loading ? (
@@ -276,6 +276,7 @@ export default function AdminPage() {
   const [testLoading, setTestLoading] = useState(false)
   const [lowConfQuestions, setLowConfQuestions] = useState([])
   const [lowConfLoading, setLowConfLoading] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     async function fetchData() {
@@ -433,7 +434,7 @@ export default function AdminPage() {
     <div dir="rtl" className="min-h-screen bg-background-light">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm anim-fade-in-down">
-        <div className="max-w-5xl mx-auto px-6 md:px-10 h-16 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 md:px-10 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
               <span className="material-symbols-outlined text-primary text-xl">admin_panel_settings</span>
@@ -448,7 +449,7 @@ export default function AdminPage() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto p-6 md:p-10 space-y-6">
+      <main className="max-w-5xl mx-auto p-4 sm:p-6 md:p-10 space-y-6">
         {/* Stats Row */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm anim-float-in anim-delay-1">
@@ -495,8 +496,8 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 bg-gray-100 rounded-xl p-1 anim-fade-in-up anim-delay-3">
+        {/* Tabs - Desktop */}
+        <div className="hidden sm:flex gap-1 bg-gray-100 rounded-xl p-1 anim-fade-in-up anim-delay-3">
           {tabs.map(tab => (
             <button
               key={tab.id}
@@ -516,6 +517,60 @@ export default function AdminPage() {
               )}
             </button>
           ))}
+        </div>
+
+        {/* Tabs - Mobile Hamburger */}
+        <div className="sm:hidden relative anim-fade-in-up anim-delay-3">
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="w-full flex items-center justify-between gap-2 bg-white rounded-xl p-3 border border-gray-200 shadow-sm"
+          >
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary text-lg">
+                {tabs.find(t => t.id === activeTab)?.icon}
+              </span>
+              <span className="text-sm font-bold text-gray-900">
+                {tabs.find(t => t.id === activeTab)?.label}
+              </span>
+              {tabs.find(t => t.id === activeTab)?.count !== undefined && (
+                <span className="px-2 py-0.5 text-xs rounded-full bg-primary/10 text-primary">
+                  {tabs.find(t => t.id === activeTab)?.count}
+                </span>
+              )}
+            </div>
+            <span className={`material-symbols-outlined text-gray-400 transition-transform duration-200 ${mobileMenuOpen ? 'rotate-180' : ''}`}>
+              expand_more
+            </span>
+          </button>
+          {mobileMenuOpen && (
+            <>
+              <div className="fixed inset-0 z-30" onClick={() => setMobileMenuOpen(false)} />
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-gray-200 py-1 z-40 anim-scale-in">
+                {tabs.map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => { setActiveTab(tab.id); setMobileMenuOpen(false) }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold transition-colors ${
+                      activeTab === tab.id
+                        ? 'text-primary bg-primary/5'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-lg">{tab.icon}</span>
+                    {tab.label}
+                    {tab.count !== undefined && (
+                      <span className={`px-2 py-0.5 text-xs rounded-full mr-auto ${
+                        activeTab === tab.id ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-500'
+                      }`}>{tab.count}</span>
+                    )}
+                    {activeTab === tab.id && (
+                      <span className="material-symbols-outlined text-primary text-sm mr-auto">check</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Feedback Toast */}

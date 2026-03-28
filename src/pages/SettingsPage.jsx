@@ -428,8 +428,16 @@ export default function SettingsPage() {
 
       {/* ───────── Footer ───────── */}
       <footer className="border-t border-gray-100 dark:border-gray-800 bg-white/60 dark:bg-surface-dark/60 mt-8">
-        <div className="max-w-3xl mx-auto px-5 py-5 text-center">
-          <p className="text-xs text-text-muted">© {new Date().getFullYear()} פסיכולוגית בכיס. כל הזכויות שמורות.</p>
+        <div className="max-w-3xl mx-auto px-5 py-5 flex flex-col items-center gap-2">
+          <div className="flex items-center gap-4">
+            <Link to="/about" className="text-xs text-text-muted hover:text-primary transition-colors no-underline flex items-center gap-1">
+              <span className="material-symbols-rounded text-sm">info</span>
+              קצת עלינו
+            </Link>
+            <Link to="/terms" className="text-xs text-text-muted hover:text-primary transition-colors no-underline">תנאי שימוש</Link>
+            <Link to="/privacy" className="text-xs text-text-muted hover:text-primary transition-colors no-underline">פרטיות</Link>
+          </div>
+          <p className="text-xs text-text-muted">© {new Date().getFullYear()} הורות בכיס. כל הזכויות שמורות.</p>
         </div>
       </footer>
 
@@ -437,7 +445,7 @@ export default function SettingsPage() {
       {showDeleteAccount && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={() => setShowDeleteAccount(false)}>
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-          <div className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm anim-scale-in" onClick={e => e.stopPropagation()}>
+          <div className="relative bg-white rounded-2xl shadow-xl p-5 sm:p-6 w-[92vw] sm:w-full max-w-sm anim-scale-in" onClick={e => e.stopPropagation()}>
             <div className="flex justify-center mb-4">
               <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
                 <span className="material-symbols-outlined text-red-600 text-4xl">warning</span>

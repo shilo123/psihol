@@ -28,22 +28,59 @@ const MAX_MESSAGES_BEFORE_SUMMARY = 20;
 // Helpers
 // ============================================================
 
+// Detect which child is being discussed based on conversation history
+function detectActiveChild(messages, children) {
+  if (!children || children.length === 0) return null;
+  if (children.length === 1) return children[0];
+
+  // Scan messages from newest to oldest for child selection
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i];
+    if (msg.role === 'user') {
+      const match = msg.content.match(/^אני מדבר\/ת על (.+)$/);
+      if (match) {
+        const selectedName = match[1].trim();
+        const child = children.find(c => c.name === selectedName);
+        if (child) return child;
+      }
+    }
+  }
+  return null;
+}
+
 function buildSystemMessage(systemPrompt, technicalPrompt, user, memories = []) {
   let contextParts = [systemPrompt];
 
   if (user.parentName) contextParts.push(`\nשם ההורה: ${user.parentName}`);
-  if (user.parentAge) contextParts.push(`גיל ההורה: ${user.parentAge}`);
+  // Dynamic parent age - calculate from birth year if available, otherwise use static
+  if (user.parentBirthYear) {
+    const dynamicAge = new Date().getFullYear() - user.parentBirthYear;
+    contextParts.push(`גיל ההורה: ${dynamicAge}`);
+  } else if (user.parentAge) {
+    contextParts.push(`גיל ההורה: ${user.parentAge}`);
+  }
   if (user.parentStyle) contextParts.push(`סגנון הורות: ${user.parentStyle}`);
+
+  const personalityHebrew = {
+    sensitive: 'רגיש/ה', stubborn: 'עקשן/ית', anxious: 'חרדתי/ת',
+    energetic: 'אנרגטי/ת', calm: 'רגוע/ה',
+  };
 
   if (user.children && user.children.length > 0) {
     contextParts.push('\nילדים:');
     user.children.forEach((child, i) => {
-      const parts = [`${i + 1}. ${child.name}`];
-      if (child.birthDate) parts.push(`(גיל: ${calculateAge(child.birthDate)})`);
-      if (child.gender) parts.push(child.gender === 'boy' ? '- בן' : '- בת');
-      if (child.personality) parts.push(`- אופי: ${child.personality}`);
-      contextParts.push(parts.join(' '));
+      const genderLabel = child.gender === 'girl' ? 'בת' : 'בן';
+      const genderNote = child.gender === 'girl' ? '(נקבה - דברי עליה בלשון נקבה!)' : '(זכר - דבר עליו בלשון זכר!)';
+      const persLabel = personalityHebrew[child.personality] || child.personality || '';
+      const parts = [`${i + 1}. ${child.name} - ${genderLabel} ${genderNote}`];
+      if (child.birthDate) parts.push(`גיל: ${calculateAge(child.birthDate)}`);
+      if (persLabel) parts.push(`אופי: ${persLabel}`);
+      contextParts.push(parts.join(', '));
     });
+    contextParts.push('\n*** חשוב מאוד - מגדר ***');
+    contextParts.push('כשאת מדברת על ילד (בן), השתמשי בלשון זכר: "הוא", "שלו", "עושה", "רוצה", "מרגיש".');
+    contextParts.push('כשאת מדברת על ילדה (בת), השתמשי בלשון נקבה: "היא", "שלה", "עושה", "רוצה", "מרגישה".');
+    contextParts.push('זה קריטי - אל תערבבי בין לשון זכר לנקבה. התאימי את כל הפניות, הכינויים והפעלים למגדר הנכון של הילד/ה.');
   }
 
   if (user.challenges && user.challenges.length > 0) {
@@ -434,6 +471,9 @@ router.post('/conversations/:id/messages', async (req, res) => {
     const allMessages = [...conversation.messages, userMessage];
     const messages = await buildOpenAIMessages(systemMessage, allMessages);
 
+    // Detect active child from conversation history
+    const activeChild = detectActiveChild(allMessages, user.children);
+
     let fullContent = await streamOpenAI(res, messages);
 
     // Extract confidence score before cleaning tags
@@ -462,6 +502,8 @@ router.post('/conversations/:id/messages', async (req, res) => {
       content: fullContent,
       timestamp: assistantTimestamp,
       confidenceScore: confidenceScore || undefined,
+      activeChildId: activeChild?.id || undefined,
+      activeChildName: activeChild?.name || undefined,
     };
 
     const isFirstMessage = conversation.messages.length === 0;
@@ -535,6 +577,23 @@ router.post('/temp', async (req, res) => {
       res.write(`data: ${JSON.stringify({ type: 'error', error: 'Internal server error' })}\n\n`);
       res.end();
     }
+  }
+});
+
+// PUT /conversations/:id - Rename conversation
+router.put('/conversations/:id', async (req, res) => {
+  try {
+    const user = await getUserFromToken(req);
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+
+    const { title } = req.body;
+    if (!title || !title.trim()) return res.status(400).json({ error: 'Title is required' });
+
+    await updateConversation(req.params.id, user.id, { title: title.trim() });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Rename conversation error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

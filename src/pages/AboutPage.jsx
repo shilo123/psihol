@@ -17,12 +17,12 @@ export default function AboutPage() {
             <div className="size-8 rounded-xl bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center">
               <span className="material-symbols-outlined text-white text-base" style={{ fontVariationSettings: "'FILL' 1" }}>psychology</span>
             </div>
-            <span className="text-sm font-extrabold text-text-main">פסיכולוגית בכיס</span>
+            <span className="text-sm font-extrabold text-text-main">הורות בכיס</span>
           </div>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-5 py-10">
+      <main className="max-w-4xl mx-auto px-4 sm:px-5 py-8 sm:py-10">
 
         {/* ---- Hero Section ---- */}
         <section className="text-center mb-16">
@@ -35,7 +35,7 @@ export default function AboutPage() {
             <span className="bg-gradient-to-l from-primary to-purple-600 bg-clip-text text-transparent">צעד אחד בכל פעם</span>
           </h1>
           <p className="text-text-muted text-base sm:text-lg leading-relaxed max-w-2xl mx-auto">
-            פסיכולוגית בכיס נולדה מתוך אמונה שלכל הורה מגיע גישה לייעוץ פסיכולוגי איכותי,
+            הורות בכיס נולדה מתוך אמונה שלכל הורה מגיע גישה לייעוץ פסיכולוגי איכותי,
             זמין ונגיש — בכל רגע שהוא צריך אותו.
           </p>
         </section>
@@ -112,7 +112,7 @@ export default function AboutPage() {
               </div>
               <div className="p-6 text-center">
                 <h3 className="text-lg font-extrabold text-text-main mb-1">אורית</h3>
-                <p className="text-xs font-semibold text-primary mb-3">יועצת פסיכולוגית</p>
+                <p className="text-xs font-semibold text-primary mb-3">מדריכת הורים</p>
                 <p className="text-sm text-text-muted leading-relaxed">
                   מומחית בהתפתחות הילד ודינמיקה משפחתית,
                   עם ניסיון עשיר בליווי הורים וילדים בגילאי הילדות המוקדמת.
@@ -170,7 +170,7 @@ export default function AboutPage() {
           <div className="bg-amber-50/80 border border-amber-200/60 rounded-2xl p-6 text-center">
             <span className="material-symbols-rounded text-amber-500 text-2xl mb-2 block">info</span>
             <p className="text-sm text-amber-800 leading-relaxed font-medium">
-              פסיכולוגית בכיס היא כלי עזר מבוסס AI ואינה מחליפה ייעוץ או טיפול פסיכולוגי מקצועי.
+              הורות בכיס היא כלי עזר מבוסס AI ואינה מחליפה ייעוץ או טיפול פסיכולוגי מקצועי.
               במקרה של מצוקה נפשית חריפה, אנא פנו לגורם מקצועי או חייגו לקו החירום <b className="text-red-600">1201</b>.
             </p>
           </div>
@@ -197,11 +197,12 @@ export default function AboutPage() {
             <div className="size-7 rounded-lg bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center">
               <span className="material-symbols-outlined text-white text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>psychology</span>
             </div>
-            <span className="text-xs font-bold text-text-muted">פסיכולוגית בכיס © {new Date().getFullYear()}</span>
+            <span className="text-xs font-bold text-text-muted">הורות בכיס © {new Date().getFullYear()}</span>
           </div>
           <div className="flex items-center gap-4">
             <Link to="/" className="text-xs text-text-muted hover:text-primary transition-colors no-underline">צ'אט</Link>
-            <Link to="/settings" className="text-xs text-text-muted hover:text-primary transition-colors no-underline">הגדרות</Link>
+            <Link to="/terms" className="text-xs text-text-muted hover:text-primary transition-colors no-underline">תנאי שימוש</Link>
+            <Link to="/privacy" className="text-xs text-text-muted hover:text-primary transition-colors no-underline">פרטיות</Link>
           </div>
         </div>
       </footer>

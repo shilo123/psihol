@@ -23,8 +23,18 @@ export async function getDb() {
   await db.collection('conversations').createIndex({ userId: 1 });
   await db.collection('conversations').createIndex({ userId: 1, createdAt: -1 });
   await db.collection('conversations').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
-  await db.collection('conversations').createIndex({ lastUsedAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 }); // 30 days inactivity TTL
+  // 3 days inactivity TTL - update existing TTL index if it was different
+  try {
+    await db.command({ collMod: 'conversations', index: { keyPattern: { lastUsedAt: 1 }, expireAfterSeconds: 3 * 24 * 60 * 60 } });
+  } catch {
+    await db.collection('conversations').createIndex({ lastUsedAt: 1 }, { expireAfterSeconds: 3 * 24 * 60 * 60 });
+  }
   await db.collection('memories').createIndex({ userId: 1 });
+
+  // TTL for token usage - keep for 90 days
+  await db.collection('token_usage').createIndex({ timestamp: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60 });
+  // TTL for low confidence questions - keep for 60 days
+  await db.collection('low_confidence_questions').createIndex({ createdAt: 1 }, { expireAfterSeconds: 60 * 24 * 60 * 60 });
 
   // Backfill lastUsedAt for existing conversations that don't have it
   await db.collection('conversations').updateMany(
@@ -89,11 +99,16 @@ export async function updateConversation(id, userId, updates) {
   await database.collection('conversations').updateOne({ id, userId }, { $set: updates });
 }
 
+const MAX_MESSAGES_PER_CONVERSATION = 200;
+
 export async function pushMessage(conversationId, userId, message) {
   const database = await getDb();
   await database.collection('conversations').updateOne(
     { id: conversationId, userId },
-    { $push: { messages: message }, $set: { lastUsedAt: new Date() } }
+    {
+      $push: { messages: { $each: [message], $slice: -MAX_MESSAGES_PER_CONVERSATION } },
+      $set: { lastUsedAt: new Date() }
+    }
   );
 }
 
@@ -241,6 +256,36 @@ export async function getMemories(userId) {
 
 export async function addMemory(userId, memory) {
   const database = await getDb();
+
+  // Check for duplicate content to avoid redundant memories
+  const existing = await database.collection('memories').findOne({
+    userId,
+    content: memory.content,
+  });
+  if (existing) {
+    // Update timestamp instead of creating duplicate
+    await database.collection('memories').updateOne(
+      { id: existing.id },
+      { $set: { updatedAt: new Date().toISOString() } }
+    );
+    return existing;
+  }
+
+  // Limit memories per user to 100 - delete oldest if exceeded
+  const count = await database.collection('memories').countDocuments({ userId });
+  if (count >= 100) {
+    const oldest = await database.collection('memories')
+      .find({ userId })
+      .sort({ createdAt: 1 })
+      .limit(count - 99)
+      .toArray();
+    if (oldest.length > 0) {
+      await database.collection('memories').deleteMany({
+        id: { $in: oldest.map(m => m.id) }
+      });
+    }
+  }
+
   const doc = {
     id: memory.id,
     userId,

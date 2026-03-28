@@ -1,5 +1,5 @@
 /**
- * פסיכולוגית בכיס - React Native App
+ * הורות בכיס - React Native App
  *
  * This app shares business logic with the web app via /shared:
  * - shared/api.js - API communication layer

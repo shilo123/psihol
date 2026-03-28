@@ -7,6 +7,7 @@ import authRoutes from './routes/auth.js';
 import chatRoutes from './routes/chat.js';
 import userRoutes from './routes/user.js';
 import adminRoutes from './routes/admin.js';
+import { getDb } from './db.js';
 
 // Load .env from project root (not server/)
 const __filename = fileURLToPath(import.meta.url);
@@ -36,4 +37,6 @@ app.get('/api/health', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
+  // Pre-connect to MongoDB on startup (avoid cold start on first request)
+  getDb().then(() => console.log('MongoDB pre-connected')).catch(err => console.error('MongoDB pre-connect failed:', err));
 });

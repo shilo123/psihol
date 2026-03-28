@@ -35,7 +35,7 @@ export default function ChatScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>פסיכולוגית בכיס</Text>
+        <Text style={styles.headerTitle}>הורות בכיס</Text>
       </View>
       <View style={styles.chatArea}>
         <Text style={styles.placeholder}>

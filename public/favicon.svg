@@ -5,18 +5,23 @@
       <stop offset="100%" style="stop-color:#a855f7"/>
     </linearGradient>
     <linearGradient id="shine" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:rgba(255,255,255,0.3)"/>
+      <stop offset="0%" style="stop-color:rgba(255,255,255,0.25)"/>
       <stop offset="100%" style="stop-color:rgba(255,255,255,0)"/>
     </linearGradient>
   </defs>
   <!-- Rounded square background -->
   <rect width="512" height="512" rx="112" fill="url(#bg)"/>
-  <!-- Subtle shine -->
   <rect width="512" height="512" rx="112" fill="url(#shine)"/>
-  <!-- Chat bubble shape -->
-  <path d="M 256 80 C 158 80 80 145 80 228 C 80 280 110 326 156 356 L 136 416 L 208 376 C 222 380 238 382 256 382 C 354 382 432 317 432 234 C 432 145 354 80 256 80 Z" fill="white" opacity="0.95"/>
-  <!-- Brain/psychology symbol inside bubble - simplified psi (Ψ) -->
-  <text x="256" y="275" text-anchor="middle" font-family="serif" font-size="180" font-weight="bold" fill="#7a5afc">&#x3A8;</text>
-  <!-- Small heart accent -->
-  <path d="M 340 140 C 332 128 316 128 308 140 C 300 128 284 128 276 140 C 264 158 308 190 308 190 C 308 190 352 158 340 140 Z" fill="#f472b6" opacity="0.85"/>
+  <!-- Parent figure (larger) -->
+  <circle cx="220" cy="155" r="42" fill="white" opacity="0.95"/>
+  <path d="M220 200 C185 200 160 230 160 265 L160 300 C160 310 168 318 178 318 L262 318 C272 318 280 310 280 300 L280 265 C280 230 255 200 220 200 Z" fill="white" opacity="0.95"/>
+  <!-- Child figure (smaller, slightly overlapping) -->
+  <circle cx="320" cy="195" r="32" fill="white" opacity="0.90"/>
+  <path d="M320 230 C295 230 275 252 275 280 L275 308 C275 316 281 322 289 322 L351 322 C359 322 365 316 365 308 L365 280 C365 252 345 230 320 230 Z" fill="white" opacity="0.90"/>
+  <!-- Heart connecting them -->
+  <path d="M 280 340 C 268 318 244 318 232 340 C 220 318 196 318 184 340 C 168 368 232 410 256 430 C 256 430 256 430 256 430 C 256 430 256 430 256 430 C 280 410 344 368 328 340 C 316 318 292 318 280 340 Z" fill="#f472b6" opacity="0.9"/>
+  <!-- Small sparkle accents -->
+  <circle cx="380" cy="130" r="8" fill="white" opacity="0.5"/>
+  <circle cx="400" cy="160" r="5" fill="white" opacity="0.35"/>
+  <circle cx="130" cy="380" r="6" fill="white" opacity="0.4"/>
 </svg>

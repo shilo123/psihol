@@ -85,19 +85,23 @@ export const useChatStore = create((set, get) => ({
   },
 
   createConversation: async (title) => {
-    try {
-      const conv = await api.createConversation(title || 'שיחה חדשה')
-      set((state) => ({
-        conversations: [conv, ...state.conversations],
-        currentConversation: conv,
-        messages: [],
-        isTempChat: false,
-      }))
-      return conv
-    } catch {
-      toast.error('לא הצלחנו ליצור שיחה חדשה. נסו שוב.')
-      return null
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const conv = await api.createConversation(title || 'שיחה חדשה')
+        set((state) => ({
+          conversations: [conv, ...state.conversations],
+          currentConversation: conv,
+          messages: [],
+          isTempChat: false,
+        }))
+        return conv
+      } catch (err) {
+        console.error('Create conversation error (attempt ' + (attempt + 1) + '):', err)
+        if (attempt === 0) await new Promise(r => setTimeout(r, 500))
+      }
     }
+    toast.error('לא הצלחנו ליצור שיחה חדשה. נסו שוב.')
+    return null
   },
 
   startTempChat: () => {

@@ -38,6 +38,8 @@ export const api = {
   getConversations: () => apiRequest('/api/chat/conversations'),
   createConversation: (title) => apiRequest('/api/chat/conversations', { method: 'POST', body: JSON.stringify({ title }) }),
   getMessages: (convId) => apiRequest(`/api/chat/conversations/${convId}/messages`),
+  renameConversation: (convId, title) => apiRequest(`/api/chat/conversations/${convId}`, { method: 'PUT', body: JSON.stringify({ title }) }),
+  deleteConversation: (convId) => apiRequest(`/api/chat/conversations/${convId}`, { method: 'DELETE' }),
   sendMessage: (convId, content) => apiRequest(`/api/chat/conversations/${convId}/messages`, { method: 'POST', body: JSON.stringify({ content }) }),
 
   // Streaming send - returns a reader for SSE chunks

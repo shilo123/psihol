@@ -2,8 +2,9 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '../../shared/authStore'
 import { useChatStore } from '../../shared/chatStore'
-import { formatTime, renderMarkdown } from '../../shared/constants'
+import { formatTime, renderMarkdown, extractAddChildData, extractFollowups, PERSONALITIES } from '../../shared/constants'
 import { api } from '../../shared/api'
+import allSuggestions from '../../shared/suggestions.json'
 
 /* ------------------------------------------------------------------ */
 /*  Date-grouping helper                                               */
@@ -33,6 +34,364 @@ function groupConversationsByDate(conversations) {
 }
 
 
+
+/* ================================================================== */
+/*  AddChildSheet - Bottom sheet (mobile) / Modal (desktop)            */
+/* ================================================================== */
+function AddChildSheet({ data, onSubmit, onClose }) {
+  const [name, setName] = useState(data?.name || '')
+  const [age, setAge] = useState(data?.age || '')
+  const [gender, setGender] = useState('boy')
+  const [personality, setPersonality] = useState(data?.personality || '')
+  const [saving, setSaving] = useState(false)
+  const [sheetVisible, setSheetVisible] = useState(false)
+  const sheetRef = useRef(null)
+
+  // Animate in
+  useEffect(() => {
+    requestAnimationFrame(() => setSheetVisible(true))
+  }, [])
+
+  function handleClose() {
+    setSheetVisible(false)
+    setTimeout(onClose, 300)
+  }
+
+  async function handleSubmit() {
+    if (!name.trim() || !age) return
+    setSaving(true)
+    try {
+      const now = new Date()
+      const birthYear = now.getFullYear() - parseInt(age, 10)
+      const birthDate = new Date(birthYear, now.getMonth(), 1).toISOString()
+      await api.addChild({
+        name: name.trim(),
+        birthDate,
+        gender,
+        personality: personality || 'calm',
+      })
+      // Update auth store with new child
+      const currentUser = useAuthStore.getState().user
+      if (currentUser) {
+        useAuthStore.setState({
+          user: {
+            ...currentUser,
+            children: [...(currentUser.children || []), {
+              name: name.trim(), birthDate, gender, personality: personality || 'calm'
+            }]
+          }
+        })
+      }
+      onSubmit({ name: name.trim(), age, gender, personality: personality || 'calm' })
+      handleClose()
+    } catch {
+      setSaving(false)
+    }
+  }
+
+  // Touch drag for mobile bottom sheet
+  const dragStart = useRef(null)
+  function onTouchStart(e) { dragStart.current = e.touches[0].clientY }
+  function onTouchMove(e) {
+    if (!dragStart.current || !sheetRef.current) return
+    const diff = e.touches[0].clientY - dragStart.current
+    if (diff > 0) sheetRef.current.style.transform = `translateY(${diff}px)`
+  }
+  function onTouchEnd(e) {
+    if (!dragStart.current || !sheetRef.current) return
+    const diff = e.changedTouches[0].clientY - dragStart.current
+    if (diff > 120) handleClose()
+    else sheetRef.current.style.transform = ''
+    dragStart.current = null
+  }
+
+  const personalityOptions = PERSONALITIES
+
+  return (
+    <div className={`fixed inset-0 z-[200] transition-all duration-300 ${sheetVisible ? 'bg-black/40 backdrop-blur-sm' : 'bg-transparent'}`} onClick={handleClose}>
+      {/* Desktop Modal */}
+      <div className="hidden md:flex items-center justify-center h-full p-4">
+        <div
+          className={`relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden transition-all duration-300 ${
+            sheetVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4'
+          }`}
+          onClick={e => e.stopPropagation()}
+        >
+          {/* Gradient header */}
+          <div className="h-2 bg-gradient-to-r from-primary via-purple-500 to-pink-400" />
+          <div className="p-7">
+            {/* Header */}
+            <div className="flex items-center gap-4 mb-6">
+              <div className="size-14 rounded-2xl bg-gradient-to-br from-primary/15 to-purple-500/15 flex items-center justify-center">
+                <span className="material-symbols-rounded text-primary text-3xl">person_add</span>
+              </div>
+              <div>
+                <h2 className="text-xl font-extrabold text-gray-900">ילד חדש זוהה!</h2>
+                <p className="text-sm text-gray-500">השלימו את הפרטים כדי שנוכל לעזור טוב יותר</p>
+              </div>
+              <button onClick={handleClose} className="mr-auto size-9 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors">
+                <span className="material-symbols-outlined text-gray-400">close</span>
+              </button>
+            </div>
+
+            {/* Form */}
+            <div className="space-y-5">
+              {/* Name */}
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">שם הילד/ה</label>
+                <div className="relative">
+                  <span className="material-symbols-rounded absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">badge</span>
+                  <input
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    className="w-full h-12 pr-11 pl-4 rounded-xl border-2 border-gray-200 bg-gray-50/50 text-sm font-medium outline-none focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10 transition-all"
+                    placeholder="לדוגמה: יוסי"
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              {/* Age */}
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">גיל</label>
+                <div className="relative">
+                  <span className="material-symbols-rounded absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">cake</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="18"
+                    value={age}
+                    onChange={e => setAge(e.target.value)}
+                    className="w-full h-12 pr-11 pl-4 rounded-xl border-2 border-gray-200 bg-gray-50/50 text-sm font-medium outline-none focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10 transition-all"
+                    placeholder="גיל בשנים"
+                  />
+                </div>
+              </div>
+
+              {/* Gender */}
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">מין</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setGender('boy')}
+                    className={`h-12 rounded-xl border-2 font-bold text-sm flex items-center justify-center gap-2 transition-all ${
+                      gender === 'boy'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm shadow-blue-500/10'
+                        : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                    }`}
+                  >
+                    <span className="material-symbols-rounded text-lg">boy</span>
+                    בן
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGender('girl')}
+                    className={`h-12 rounded-xl border-2 font-bold text-sm flex items-center justify-center gap-2 transition-all ${
+                      gender === 'girl'
+                        ? 'border-pink-500 bg-pink-50 text-pink-700 shadow-sm shadow-pink-500/10'
+                        : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                    }`}
+                  >
+                    <span className="material-symbols-rounded text-lg">girl</span>
+                    בת
+                  </button>
+                </div>
+              </div>
+
+              {/* Personality */}
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">אופי</label>
+                <div className="flex flex-wrap gap-2">
+                  {personalityOptions.map(p => (
+                    <button
+                      key={p.value}
+                      type="button"
+                      onClick={() => setPersonality(p.value)}
+                      className={`px-4 py-2.5 rounded-xl border-2 text-sm font-semibold transition-all ${
+                        personality === p.value
+                          ? 'border-primary bg-primary/8 text-primary shadow-sm shadow-primary/10'
+                          : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 mt-7">
+              <button
+                onClick={handleClose}
+                className="flex-1 h-12 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
+              >
+                לא עכשיו
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={!name.trim() || !age || saving}
+                className="flex-1 h-12 rounded-xl font-bold text-white bg-gradient-to-l from-primary to-purple-600 shadow-lg shadow-primary/25 hover:shadow-xl hover:brightness-110 transition-all disabled:opacity-50 disabled:shadow-none flex items-center justify-center gap-2"
+              >
+                {saving ? (
+                  <span className="material-symbols-rounded animate-spin text-lg">progress_activity</span>
+                ) : (
+                  <span className="material-symbols-rounded text-lg">check_circle</span>
+                )}
+                {saving ? 'שומר...' : 'הוספה'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Bottom Sheet */}
+      <div className="md:hidden flex flex-col justify-end h-full" onClick={handleClose}>
+        <div
+          ref={sheetRef}
+          className={`bg-white rounded-t-3xl shadow-2xl overflow-hidden transition-transform duration-300 ease-out ${
+            sheetVisible ? 'translate-y-0' : 'translate-y-full'
+          }`}
+          style={{ maxHeight: '90vh' }}
+          onClick={e => e.stopPropagation()}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        >
+          {/* Drag handle */}
+          <div className="flex justify-center pt-3 pb-1">
+            <div className="w-10 h-1.5 bg-gray-300 rounded-full" />
+          </div>
+
+          {/* Gradient bar */}
+          <div className="h-1.5 bg-gradient-to-r from-primary via-purple-500 to-pink-400 mx-6 rounded-full" />
+
+          <div className="p-6 pb-8 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 40px)' }}>
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-6">
+              <div className="size-12 rounded-2xl bg-gradient-to-br from-primary/15 to-purple-500/15 flex items-center justify-center shrink-0">
+                <span className="material-symbols-rounded text-primary text-2xl">person_add</span>
+              </div>
+              <div>
+                <h2 className="text-lg font-extrabold text-gray-900">ילד חדש זוהה!</h2>
+                <p className="text-xs text-gray-500">השלימו את הפרטים</p>
+              </div>
+            </div>
+
+            {/* Form */}
+            <div className="space-y-4">
+              {/* Name */}
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1.5">שם הילד/ה</label>
+                <div className="relative">
+                  <span className="material-symbols-rounded absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">badge</span>
+                  <input
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    className="w-full h-12 pr-11 pl-4 rounded-xl border-2 border-gray-200 bg-gray-50/50 text-sm font-medium outline-none focus:border-primary focus:bg-white transition-all"
+                    placeholder="לדוגמה: יוסי"
+                  />
+                </div>
+              </div>
+
+              {/* Age + Gender row */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1.5">גיל</label>
+                  <div className="relative">
+                    <span className="material-symbols-rounded absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">cake</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="18"
+                      value={age}
+                      onChange={e => setAge(e.target.value)}
+                      className="w-full h-12 pr-11 pl-4 rounded-xl border-2 border-gray-200 bg-gray-50/50 text-sm font-medium outline-none focus:border-primary focus:bg-white transition-all"
+                      placeholder="שנים"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1.5">מין</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setGender('boy')}
+                      className={`h-12 rounded-xl border-2 font-bold text-xs flex items-center justify-center gap-1 transition-all ${
+                        gender === 'boy'
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 text-gray-500'
+                      }`}
+                    >
+                      <span className="material-symbols-rounded text-base">boy</span>
+                      בן
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGender('girl')}
+                      className={`h-12 rounded-xl border-2 font-bold text-xs flex items-center justify-center gap-1 transition-all ${
+                        gender === 'girl'
+                          ? 'border-pink-500 bg-pink-50 text-pink-700'
+                          : 'border-gray-200 text-gray-500'
+                      }`}
+                    >
+                      <span className="material-symbols-rounded text-base">girl</span>
+                      בת
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Personality */}
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1.5">אופי</label>
+                <div className="flex flex-wrap gap-2">
+                  {personalityOptions.map(p => (
+                    <button
+                      key={p.value}
+                      type="button"
+                      onClick={() => setPersonality(p.value)}
+                      className={`px-3.5 py-2 rounded-xl border-2 text-xs font-semibold transition-all ${
+                        personality === p.value
+                          ? 'border-primary bg-primary/8 text-primary'
+                          : 'border-gray-200 text-gray-600'
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={handleClose}
+                className="flex-1 h-12 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
+              >
+                לא עכשיו
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={!name.trim() || !age || saving}
+                className="flex-1 h-12 rounded-xl font-bold text-white bg-gradient-to-l from-primary to-purple-600 shadow-lg shadow-primary/25 hover:shadow-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {saving ? (
+                  <span className="material-symbols-rounded animate-spin text-lg">progress_activity</span>
+                ) : (
+                  <span className="material-symbols-rounded text-lg">check_circle</span>
+                )}
+                {saving ? 'שומר...' : 'הוספה'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 /* ================================================================== */
 /*  ChatPage                                                           */
@@ -92,6 +451,55 @@ export default function ChatPage() {
     return messages.some(m => m.role === 'user' && /^אני מדבר\/ת על /.test(m.content))
   }, [messages])
 
+  // Detect active child from messages (last assistant message with activeChildName, or from user selection)
+  const activeChildName = useMemo(() => {
+    // Check from newest messages - find the last AI response with activeChildName
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'assistant' && messages[i].activeChildName) {
+        return messages[i].activeChildName
+      }
+    }
+    // Fallback: check user's child selection messages
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'user') {
+        const match = messages[i].content.match(/^אני מדבר\/ת על (.+)$/)
+        if (match) return match[1].trim()
+      }
+    }
+    // If only one child, default to that
+    if (user?.children?.length === 1) return user.children[0].name
+    return null
+  }, [messages, user])
+
+  const [showChildPicker, setShowChildPicker] = useState(false)
+
+  // Add child detection from AI responses
+  const [addChildData, setAddChildData] = useState(null) // { name, age, personality }
+  const [dismissedChildren, setDismissedChildren] = useState(new Set())
+  const lastCheckedMsgId = useRef(null)
+
+  useEffect(() => {
+    if (messages.length === 0 || sending) return
+    const lastMsg = messages[messages.length - 1]
+    if (lastMsg.role !== 'assistant' || lastMsg.id === lastCheckedMsgId.current) return
+    lastCheckedMsgId.current = lastMsg.id
+
+    const childData = extractAddChildData(lastMsg.content)
+    if (!childData) return
+
+    // Check if child is already registered
+    const isRegistered = user?.children?.some(c => c.name === childData.name)
+    if (isRegistered || dismissedChildren.has(childData.name)) return
+
+    setAddChildData(childData)
+  }, [messages, sending, user, dismissedChildren])
+
+  // Long-press context menu for conversations
+  const [contextMenu, setContextMenu] = useState(null) // { convId, convTitle, x, y }
+  const [deleteConfirm, setDeleteConfirm] = useState(null) // { convId, convTitle }
+  const [editingConv, setEditingConv] = useState(null) // { convId, title }
+  const longPressTimer = useRef(null)
+
   /* ---- Effects ---- */
   // Load conversations on login (only after user is validated by init)
   useEffect(() => {
@@ -100,12 +508,8 @@ export default function ChatPage() {
     }
   }, [isLoggedIn, user, loadConversations])
 
-  // Auto-select first conversation
-  useEffect(() => {
-    if (isLoggedIn && conversations.length > 0 && !currentConversation) {
-      selectConversation(conversations[0])
-    }
-  }, [isLoggedIn, conversations, currentConversation, selectConversation])
+  // On landing, always start with a fresh new conversation view (no auto-select)
+  // The user sees the welcome screen and can start typing or pick an old chat from sidebar
 
   // Navigate to onboarding after login if not onboarded (skip for guests)
   useEffect(() => {
@@ -142,6 +546,22 @@ export default function ChatPage() {
     if (h < 21) return 'ערב טוב'
     return 'לילה טוב'
   }, [])
+
+  // Pick 4 random suggestions per session
+  const randomSuggestions = useMemo(() => {
+    const shuffled = [...allSuggestions].sort(() => Math.random() - 0.5)
+    return shuffled.slice(0, 4)
+  }, [])
+
+  // Close child picker on outside click
+  useEffect(() => {
+    if (!showChildPicker) return
+    const handler = (e) => {
+      if (!e.target.closest('.relative')) setShowChildPicker(false)
+    }
+    document.addEventListener('click', handler)
+    return () => document.removeEventListener('click', handler)
+  }, [showChildPicker])
 
   // Auto-grow textarea
   useEffect(() => {
@@ -184,7 +604,7 @@ export default function ChatPage() {
         window.google.accounts.id.renderButton(googleHiddenRef.current, {
           theme: 'outline',
           size: 'large',
-          width: 400,
+          width: Math.min(400, window.innerWidth - 48),
           text: 'continue_with',
           locale: 'he',
         })
@@ -271,6 +691,60 @@ export default function ChatPage() {
     })
   }
 
+  /* ---- Long-press handlers for conversations ---- */
+  function handleConvLongPressStart(e, conv) {
+    longPressTimer.current = setTimeout(() => {
+      const rect = e.currentTarget.getBoundingClientRect()
+      setContextMenu({
+        convId: conv.id,
+        convTitle: conv.title || 'שיחה חדשה',
+        x: rect.left,
+        y: rect.bottom,
+      })
+    }, 500)
+  }
+  function handleConvLongPressEnd() {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+  }
+
+  async function handleDeleteConversation(convId) {
+    try {
+      await api.deleteConversation(convId)
+      useChatStore.setState(state => {
+        const filtered = state.conversations.filter(c => c.id !== convId)
+        return {
+          conversations: filtered,
+          currentConversation: state.currentConversation?.id === convId ? null : state.currentConversation,
+          messages: state.currentConversation?.id === convId ? [] : state.messages,
+        }
+      })
+      setDeleteConfirm(null)
+    } catch {
+      // error
+    }
+  }
+
+  async function handleRenameConversation() {
+    if (!editingConv || !editingConv.title.trim()) return
+    try {
+      await api.renameConversation(editingConv.convId, editingConv.title.trim())
+      useChatStore.setState(state => ({
+        conversations: state.conversations.map(c =>
+          c.id === editingConv.convId ? { ...c, title: editingConv.title.trim() } : c
+        ),
+        currentConversation: state.currentConversation?.id === editingConv.convId
+          ? { ...state.currentConversation, title: editingConv.title.trim() }
+          : state.currentConversation,
+      }))
+      setEditingConv(null)
+    } catch {
+      // error
+    }
+  }
+
   /* ---- Collapsible email login ---- */
   const [showEmailLogin, setShowEmailLogin] = useState(false)
 
@@ -291,7 +765,7 @@ export default function ChatPage() {
             <div className="mx-auto mb-3 w-18 h-18 rounded-2xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-xl shadow-primary/30 transform rotate-3 anim-pop-in anim-delay-1" style={{ width: 72, height: 72 }}>
               <span className="material-symbols-outlined text-white text-4xl">psychology</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-text-main mb-1 anim-fade-in-up anim-delay-2">פסיכולוגית בכיס</h1>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-text-main mb-1 anim-fade-in-up anim-delay-2">הורות בכיס</h1>
             <p className="text-text-muted mb-5 leading-relaxed text-sm anim-fade-in-up anim-delay-3">
               הדרך החכמה להתמודד עם אתגרי הורות - בכל רגע
             </p>
@@ -478,10 +952,14 @@ export default function ChatPage() {
             {/* Terms */}
             <p className="mt-4 text-[11px] text-text-muted/60 leading-relaxed">
               בכניסה, את/ה מסכים/ה ל
-              <a href="#" className="text-primary hover:underline mx-0.5">תנאי השימוש</a>
+              <Link to="/terms" className="text-primary hover:underline mx-0.5">תנאי השימוש</Link>
               ול
-              <a href="#" className="text-primary hover:underline mx-0.5">מדיניות הפרטיות</a>
+              <Link to="/privacy" className="text-primary hover:underline mx-0.5">מדיניות הפרטיות</Link>
             </p>
+            <Link to="/about" className="mt-3 inline-flex items-center gap-1.5 text-[11px] text-text-muted/60 hover:text-primary transition-colors no-underline">
+              <span className="material-symbols-rounded text-xs">info</span>
+              קצת עלינו
+            </Link>
           </div>
         </div>
       </div>
@@ -525,13 +1003,52 @@ export default function ChatPage() {
                 <span className="material-symbols-rounded text-primary text-base" style={{ fontVariationSettings: "'FILL' 1" }}>psychology</span>
               </div>
               <div className="flex flex-col">
-                <span className="text-sm font-bold text-text-main dark:text-gray-200 leading-tight">פסיכולוגית בכיס</span>
+                <span className="text-sm font-bold text-text-main dark:text-gray-200 leading-tight">הורות בכיס</span>
                 <span className="text-[10px] text-emerald-500 font-medium leading-tight flex items-center gap-1">
                   <span className="size-1.5 bg-emerald-400 rounded-full inline-block"></span>
                   מקשיבה
                 </span>
               </div>
             </div>
+            {/* Active child indicator */}
+            {isLoggedIn && activeChildName && !isTempChat && (
+              <div className="relative mr-auto">
+                <button
+                  onClick={() => setShowChildPicker(!showChildPicker)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-pink-50 border border-pink-200/60 text-pink-700 rounded-full text-xs font-bold hover:bg-pink-100 transition-all"
+                >
+                  <span className="material-symbols-rounded text-sm">child_care</span>
+                  <span>{activeChildName}</span>
+                  <span className="material-symbols-rounded text-sm text-pink-400">edit</span>
+                </button>
+                {showChildPicker && user?.children?.length > 1 && (
+                  <div className="absolute top-full mt-1 left-0 bg-white rounded-xl shadow-xl border border-gray-200 py-1 z-50 min-w-[140px] anim-scale-in">
+                    {user.children.map(child => (
+                      <button
+                        key={child.id || child.name}
+                        onClick={() => {
+                          handleChildSelect(child.name)
+                          setShowChildPicker(false)
+                        }}
+                        className={`w-full text-right px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors flex items-center gap-2 ${
+                          child.name === activeChildName ? 'text-primary font-bold bg-primary/5' : 'text-gray-700'
+                        }`}
+                      >
+                        <span className={`material-symbols-rounded text-base ${
+                          child.gender === 'girl' ? 'text-pink-500' : 'text-blue-500'
+                        }`}>
+                          {child.gender === 'girl' ? 'girl' : 'boy'}
+                        </span>
+                        {child.name}
+                        {child.name === activeChildName && (
+                          <span className="material-symbols-rounded text-primary text-sm mr-auto">check</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             {/* Guest upgrade nudge */}
             {isGuest && (
               <button
@@ -542,17 +1059,32 @@ export default function ChatPage() {
                 הירשמו לשמירת השיחות
               </button>
             )}
-            {/* Temp chat indicator */}
-            {isTempChat && !isGuest && (
-              <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-bold mr-auto">
-                <span className="material-symbols-rounded text-sm">timer</span>
-                שיחה זמנית
-              </div>
+            {/* Temp chat toggle button */}
+            {!isGuest && (
+              <button
+                onClick={() => {
+                  if (isTempChat) {
+                    // Exit temp chat - go back to normal
+                    useChatStore.setState({ isTempChat: false, currentConversation: null, messages: [] })
+                  } else {
+                    startTempChat()
+                  }
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                  isTempChat
+                    ? 'bg-amber-100 text-amber-700 border border-amber-300 shadow-sm'
+                    : 'bg-gray-100 text-gray-500 hover:bg-amber-50 hover:text-amber-600 border border-transparent hover:border-amber-200'
+                } ${!activeChildName ? 'mr-auto' : ''}`}
+                title={isTempChat ? 'יציאה משיחה זמנית' : 'שיחה זמנית - לא נשמרת'}
+              >
+                <span className="material-symbols-rounded text-sm">chat_bubble</span>
+                {isTempChat && <span className="material-symbols-rounded text-xs">close</span>}
+              </button>
             )}
           </div>
 
           {/* Messages container */}
-          <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 md:px-8 pt-5 pb-44 scrollbar-thin">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 sm:px-4 md:px-8 pt-5 pb-44 scrollbar-thin">
             {messages.length === 0 ? (
               /* ---- Welcome / Empty state ---- */
               <div className="max-w-2xl mx-auto flex flex-col items-center anim-fade-in px-2">
@@ -578,14 +1110,10 @@ export default function ChatPage() {
                   </div>
                 </div>
 
-                {/* Quick suggestion chips — emotionally-worded, warm */}
-                <div className="w-full space-y-2.5 anim-fade-in-up anim-delay-3">
-                  {[
-                    { text: 'הילד שלי מתקשה להירדם בלילה', emoji: '🌙', bg: 'bg-indigo-50/70 border-indigo-100 hover:bg-indigo-50 hover:border-indigo-200' },
-                    { text: 'איך מתמודדים עם התפרצויות זעם?', emoji: '🌋', bg: 'bg-rose-50/70 border-rose-100 hover:bg-rose-50 hover:border-rose-200' },
-                    { text: 'מתלבטים לגבי זמן מסך', emoji: '📱', bg: 'bg-sky-50/70 border-sky-100 hover:bg-sky-50 hover:border-sky-200' },
-                    { text: 'הילדים רבים ביניהם ואני לא יודע/ת מה לעשות', emoji: '🤝', bg: 'bg-amber-50/70 border-amber-100 hover:bg-amber-50 hover:border-amber-200' },
-                  ].map((s, i) => (
+                {/* Quick suggestion chips — desktop: cards grid, mobile: compact pill chips */}
+                {/* Desktop version */}
+                <div className="hidden sm:grid w-full grid-cols-2 gap-3 anim-fade-in-up anim-delay-3">
+                  {randomSuggestions.map((s, i) => (
                     <button
                       key={i}
                       onClick={async () => {
@@ -597,11 +1125,41 @@ export default function ChatPage() {
                         await sendMessage(s.text)
                       }}
                       disabled={sending}
-                      className={`suggestion-chip flex items-center gap-3.5 w-full px-4 py-3.5 ${s.bg} border rounded-2xl text-right active:scale-[0.97] transition-all duration-200 disabled:opacity-50 group hover:shadow-md`}
+                      className="group relative flex flex-col items-start gap-2.5 w-full p-4 bg-white dark:bg-surface-dark border-2 border-gray-100 dark:border-gray-700/50 rounded-2xl text-right active:scale-[0.97] transition-all duration-300 disabled:opacity-50 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/8 hover:-translate-y-0.5 anim-fade-in-up"
+                      style={{ animationDelay: `${0.3 + i * 0.08}s` }}
                     >
-                      <span className="text-xl flex-shrink-0 group-hover:scale-110 transition-transform duration-200">{s.emoji}</span>
-                      <span className="text-[13.5px] font-medium text-text-main dark:text-gray-200 flex-1 leading-snug">{s.text}</span>
-                      <span className="material-symbols-rounded text-gray-300 text-base group-hover:text-primary/60 group-hover:translate-x-[-3px] transition-all duration-200">arrow_back</span>
+                      <div className="flex items-center gap-3 w-full">
+                        <span className="flex items-center justify-center size-10 rounded-xl bg-primary/8 group-hover:bg-primary/15 transition-colors duration-300 text-xl">{s.emoji}</span>
+                        <span className="flex-1 text-[13.5px] font-medium text-text-main dark:text-gray-200 leading-relaxed">{s.text}</span>
+                      </div>
+                      <div className="w-full flex items-center justify-end opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                        <span className="text-[11px] text-primary/60 font-bold flex items-center gap-1">
+                          לחצו לשיחה
+                          <span className="material-symbols-rounded text-sm">arrow_back</span>
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                {/* Mobile version — stacked compact list */}
+                <div className="sm:hidden w-full space-y-2 anim-fade-in-up anim-delay-3">
+                  {randomSuggestions.map((s, i) => (
+                    <button
+                      key={i}
+                      onClick={async () => {
+                        setInputText('')
+                        if (!isTempChat && !currentConversation) {
+                          const conv = await createConversation(s.text.substring(0, 50))
+                          if (!conv) return
+                        }
+                        await sendMessage(s.text)
+                      }}
+                      disabled={sending}
+                      className="flex items-center gap-3 w-full px-4 py-3 bg-white dark:bg-surface-dark border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm active:scale-[0.97] transition-transform duration-150 disabled:opacity-50 text-right"
+                    >
+                      <span className="text-lg shrink-0">{s.emoji}</span>
+                      <span className="flex-1 text-[13px] font-medium text-text-main dark:text-gray-200 leading-snug">{s.text}</span>
+                      <span className="material-symbols-rounded text-gray-300 text-sm shrink-0">arrow_back</span>
                     </button>
                   ))}
                 </div>
@@ -623,7 +1181,7 @@ export default function ChatPage() {
                         </div>
                       )}
 
-                      <div className={`max-w-[82%] ${isUser ? 'ml-auto' : ''}`}>
+                      <div className={`max-w-[92%] sm:max-w-[82%] ${isUser ? 'ml-auto' : ''}`}>
                         {isUser ? (
                           /* User bubble — warm, approachable */
                           <div className="bg-gradient-to-l from-primary to-purple-500 text-white px-5 py-3.5 rounded-2xl rounded-tl-md shadow-lg shadow-primary/15">
@@ -646,55 +1204,7 @@ export default function ChatPage() {
                                     }
                                     return
                                   }
-                                  // Add child trait selection
-                                  const traitBtn = e.target.closest('.add-child-trait')
-                                  if (traitBtn) {
-                                    const card = traitBtn.closest('.add-child-card')
-                                    if (card) {
-                                      card.querySelectorAll('.add-child-trait').forEach(b => b.classList.remove('active'))
-                                      traitBtn.classList.add('active')
-                                      const confirmBtn = card.querySelector('.add-child-confirm')
-                                      if (confirmBtn) confirmBtn.dataset.personality = traitBtn.dataset.trait
-                                    }
-                                    return
-                                  }
-                                  // Add child confirm
-                                  const addChildBtn = e.target.closest('.add-child-confirm')
-                                  if (addChildBtn) {
-                                    const { name, age, personality } = addChildBtn.dataset
-                                    if (name) {
-                                      const now = new Date()
-                                      const birthYear = now.getFullYear() - parseInt(age || '3', 10)
-                                      const birthDate = new Date(birthYear, now.getMonth(), 1).toISOString()
-                                      api.addChild({ name, birthDate, gender: 'boy', personality: personality || 'calm' })
-                                        .then((updatedChild) => {
-                                          const currentUser = useAuthStore.getState().user
-                                          if (currentUser) {
-                                            useAuthStore.setState({
-                                              user: { ...currentUser, children: [...(currentUser.children || []), { name, birthDate, gender: 'boy', personality: personality || 'calm' }] }
-                                            })
-                                          }
-                                          const card = addChildBtn.closest('.add-child-card')
-                                          if (card) {
-                                            card.innerHTML = `<div class="add-child-success"><span class="material-symbols-rounded">check_circle</span> ${name} נוסף/ה בהצלחה!</div>`
-                                          }
-                                        })
-                                        .catch(() => {
-                                          const card = addChildBtn.closest('.add-child-card')
-                                          if (card) {
-                                            card.innerHTML = `<div class="add-child-error"><span class="material-symbols-rounded">error</span> שגיאה בהוספה, נסו שוב</div>`
-                                          }
-                                        })
-                                    }
-                                    return
-                                  }
-                                  const followupBtn = e.target.closest('.followup-btn')
-                                  if (followupBtn) {
-                                    const question = followupBtn.dataset.followup
-                                    if (question && !sending) {
-                                      sendMessage(question)
-                                    }
-                                  }
+                                  // followup buttons are now rendered outside the bubble as React components
                                 }}
                               />
                             </div>
@@ -730,6 +1240,30 @@ export default function ChatPage() {
                           </div>
                         )}
 
+                        {/* Follow-up questions — outside the bubble */}
+                        {!isUser && (() => {
+                          const followups = extractFollowups(msg.content)
+                          if (followups.length === 0) return null
+                          return (
+                            <div className="mt-3 space-y-2 pr-1">
+                              {followups.map((q, fi) => (
+                                <button
+                                  key={fi}
+                                  onClick={() => { if (!sending) sendMessage(q) }}
+                                  disabled={sending}
+                                  className="w-full flex items-center gap-3 px-4 py-3 bg-white dark:bg-surface-dark border-2 border-primary/15 rounded-2xl text-right hover:border-primary/40 hover:bg-primary/[0.03] active:scale-[0.98] transition-all duration-200 disabled:opacity-50 group"
+                                >
+                                  <span className="shrink-0 size-7 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                                    <span className="material-symbols-rounded text-primary text-base">chat_bubble</span>
+                                  </span>
+                                  <span className="flex-1 text-[13px] font-medium text-text-main dark:text-gray-300 leading-relaxed">{q}</span>
+                                  <span className="material-symbols-rounded text-gray-300 text-base shrink-0 group-hover:text-primary/60 group-hover:translate-x-[-2px] transition-all">arrow_back</span>
+                                </button>
+                              ))}
+                            </div>
+                          )
+                        })()}
+
                         {/* Timestamp for user messages */}
                         {isUser && msg.timestamp && (
                           <p className="text-[11px] text-gray-400 mt-1.5 px-1 text-left">{formatTime(msg.timestamp)}</p>
@@ -745,7 +1279,7 @@ export default function ChatPage() {
                     <div className="shrink-0 size-9 rounded-2xl bg-gradient-to-br from-primary via-purple-500 to-pink-400 flex items-center justify-center shadow-lg shadow-primary/20 mt-1 avatar-breathing">
                       <span className="material-symbols-outlined text-white text-base" style={{ fontVariationSettings: "'FILL' 1" }}>psychology</span>
                     </div>
-                    <div className="max-w-[82%]">
+                    <div className="max-w-[92%] sm:max-w-[82%]">
                       <div className="relative bg-white dark:bg-surface-dark rounded-2xl rounded-tr-md shadow-md shadow-gray-200/60 dark:shadow-none overflow-hidden ai-card-enter border border-gray-100 dark:border-gray-700/50">
                         <div className="h-[3px] bg-gradient-to-r from-primary/30 via-purple-400/30 to-pink-300/30" />
                         <div className="p-5 md:p-6">
@@ -788,7 +1322,7 @@ export default function ChatPage() {
             {/* Gradient fade — larger for more breathing room */}
             <div className="h-12 bg-gradient-to-t from-chat-bg dark:from-background-dark to-transparent pointer-events-none" />
 
-            <div className="bg-chat-bg dark:bg-background-dark px-4 md:px-8 pb-5">
+            <div className="bg-chat-bg dark:bg-background-dark px-3 sm:px-4 md:px-8 pb-5">
               <form
                 onSubmit={handleSend}
                 className="max-w-3xl mx-auto relative bg-white dark:bg-surface-dark rounded-2xl border border-gray-200 dark:border-gray-700 shadow-lg shadow-gray-200/50 dark:shadow-none focus-within:border-primary/40 focus-within:shadow-xl focus-within:shadow-primary/8 transition-all duration-300"
@@ -855,7 +1389,7 @@ export default function ChatPage() {
               <div className="size-9 rounded-xl bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center shadow-sm">
                 <span className="material-symbols-outlined text-white text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>psychology</span>
               </div>
-              <span className="font-black text-base text-text-main dark:text-gray-100">פסיכולוגית בכיס</span>
+              <span className="font-black text-base text-text-main dark:text-gray-100">הורות בכיס</span>
               {/* Close sidebar on mobile */}
               <button
                 onClick={() => setSidebarOpen(false)}
@@ -865,23 +1399,14 @@ export default function ChatPage() {
               </button>
             </div>
 
-            {/* New conversation buttons */}
-            <div className="flex gap-2">
-              <button
-                onClick={handleNewConversation}
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-3 bg-primary text-white rounded-xl font-semibold shadow-lg shadow-primary/25 hover:shadow-xl hover:brightness-110 transition-all duration-200"
-              >
-                <span className="material-symbols-outlined text-xl">add_comment</span>
-                שיחה חדשה
-              </button>
-              <button
-                onClick={() => { startTempChat(); setSidebarOpen(false) }}
-                className="shrink-0 flex items-center justify-center gap-1.5 px-3 py-3 bg-amber-500 text-white rounded-xl font-semibold shadow-lg shadow-amber-500/25 hover:shadow-xl hover:brightness-110 transition-all duration-200"
-                title="שיחה זמנית - לא נשמרת"
-              >
-                <span className="material-symbols-outlined text-xl">timer</span>
-              </button>
-            </div>
+            {/* New conversation button */}
+            <button
+              onClick={handleNewConversation}
+              className="w-full flex items-center justify-center gap-2 px-3 py-3 bg-primary text-white rounded-xl font-semibold shadow-lg shadow-primary/25 hover:shadow-xl hover:brightness-110 transition-all duration-200"
+            >
+              <span className="material-symbols-outlined text-xl">add_comment</span>
+              שיחה חדשה
+            </button>
           </div>
 
           {/* Conversations list */}
@@ -921,11 +1446,25 @@ export default function ChatPage() {
                       <button
                         key={conv.id}
                         onClick={() => {
-                          selectConversation(conv)
-                          setSidebarOpen(false)
+                          if (!contextMenu) {
+                            selectConversation(conv)
+                            setSidebarOpen(false)
+                          }
+                        }}
+                        onTouchStart={(e) => handleConvLongPressStart(e, conv)}
+                        onTouchEnd={handleConvLongPressEnd}
+                        onContextMenu={(e) => {
+                          e.preventDefault()
+                          const rect = e.currentTarget.getBoundingClientRect()
+                          setContextMenu({
+                            convId: conv.id,
+                            convTitle: conv.title || 'שיחה חדשה',
+                            x: rect.left,
+                            y: rect.bottom,
+                          })
                         }}
                         className={`
-                          w-full text-right px-3 py-2.5 rounded-xl mb-0.5 transition-all duration-150 group
+                          w-full text-right px-3 py-2.5 rounded-xl mb-0.5 transition-all duration-150 group select-none
                           ${isActive
                             ? 'bg-primary/10 text-primary font-semibold'
                             : 'text-text-main hover:bg-gray-50'}
@@ -948,6 +1487,107 @@ export default function ChatPage() {
               ))
             )}
           </div>
+
+          {/* Context menu for long-press on conversations */}
+          {contextMenu && (
+            <>
+              <div className="fixed inset-0 z-50" onClick={() => setContextMenu(null)} />
+              <div
+                className="fixed z-50 bg-white rounded-xl shadow-2xl border border-gray-200 py-1 min-w-[160px] anim-scale-in"
+                style={{ top: contextMenu.y, right: 16 }}
+              >
+                <button
+                  onClick={() => {
+                    setEditingConv({ convId: contextMenu.convId, title: contextMenu.convTitle })
+                    setContextMenu(null)
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-lg text-blue-500">edit</span>
+                  שינוי שם
+                </button>
+                <button
+                  onClick={() => {
+                    setDeleteConfirm({ convId: contextMenu.convId, convTitle: contextMenu.convTitle })
+                    setContextMenu(null)
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-lg">delete</span>
+                  מחיקה
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* Delete confirmation popup */}
+          {deleteConfirm && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={() => setDeleteConfirm(null)}>
+              <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+              <div className="relative bg-white rounded-2xl shadow-xl p-5 sm:p-6 w-[92vw] sm:w-full max-w-sm anim-scale-in" onClick={e => e.stopPropagation()}>
+                <div className="flex justify-center mb-4">
+                  <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-red-600 text-3xl">warning</span>
+                  </div>
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 text-center mb-2">מחיקת שיחה</h3>
+                <p className="text-sm text-gray-500 text-center mb-6">
+                  האם אתה בטוח שברצונך למחוק את השיחה
+                  <strong className="block mt-1">"{deleteConfirm.convTitle}"</strong>
+                  <span className="text-red-500 text-xs mt-1 block">פעולה זו בלתי הפיכה</span>
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setDeleteConfirm(null)}
+                    className="flex-1 h-11 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
+                  >
+                    ביטול
+                  </button>
+                  <button
+                    onClick={() => handleDeleteConversation(deleteConfirm.convId)}
+                    className="flex-1 h-11 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <span className="material-symbols-outlined text-lg">delete_forever</span>
+                    מחק
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Edit conversation title popup */}
+          {editingConv && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={() => setEditingConv(null)}>
+              <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+              <div className="relative bg-white rounded-2xl shadow-xl p-5 sm:p-6 w-[92vw] sm:w-full max-w-sm anim-scale-in" onClick={e => e.stopPropagation()}>
+                <h3 className="text-lg font-bold text-gray-900 text-center mb-4">שינוי שם שיחה</h3>
+                <input
+                  autoFocus
+                  value={editingConv.title}
+                  onChange={e => setEditingConv(prev => ({ ...prev, title: e.target.value }))}
+                  onKeyDown={e => { if (e.key === 'Enter') handleRenameConversation() }}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl outline-none focus:border-primary text-sm text-right"
+                  placeholder="שם השיחה"
+                />
+                <div className="flex gap-3 mt-4">
+                  <button
+                    onClick={() => setEditingConv(null)}
+                    className="flex-1 h-11 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
+                  >
+                    ביטול
+                  </button>
+                  <button
+                    onClick={handleRenameConversation}
+                    disabled={!editingConv.title.trim()}
+                    className="flex-1 h-11 rounded-xl font-bold text-white bg-primary hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined text-lg">save</span>
+                    שמור
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Bottom: Profile + Settings + Logout */}
           <div className="shrink-0 border-t border-gray-100 dark:border-gray-800">
@@ -978,17 +1618,21 @@ export default function ChatPage() {
                 <span className="material-symbols-outlined text-lg text-gray-400">settings</span>
                 הגדרות
               </Link>
-              <div className="w-px bg-gray-100 dark:bg-gray-800" />
-              <Link
-                to="/about"
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm text-text-main dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors no-underline"
-              >
-                <span className="material-symbols-outlined text-lg text-gray-400">group</span>
-                קצת עלינו
-              </Link>
             </div>
           </div>
         </aside>
+
+      {/* ---- Add Child Sheet ---- */}
+      {addChildData && (
+        <AddChildSheet
+          data={addChildData}
+          onSubmit={() => setAddChildData(null)}
+          onClose={() => {
+            setDismissedChildren(prev => new Set([...prev, addChildData.name]))
+            setAddChildData(null)
+          }}
+        />
+      )}
 
       {/* ---- Inline styles for typing animation ---- */}
       <style>{`
@@ -1165,52 +1809,7 @@ export default function ChatPage() {
           filter: grayscale(0.5);
         }
 
-        /* ---- Follow-up suggestion chips ---- */
-        .followup-container {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          margin-top: 18px;
-          padding-top: 16px;
-          border-top: 1px solid #f0edf7;
-          direction: rtl;
-        }
-        .followup-btn {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          padding: 9px 18px;
-          background: transparent;
-          border: 1.5px solid #d8d3e8;
-          border-radius: 100px;
-          font-size: 13px;
-          font-weight: 600;
-          color: #6d28d9;
-          cursor: pointer;
-          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-          direction: rtl;
-          white-space: nowrap;
-          line-height: 1.3;
-        }
-        .followup-btn::before {
-          content: '✦';
-          font-size: 10px;
-          opacity: 0.5;
-        }
-        .followup-btn:hover {
-          background: #7c3aed;
-          border-color: #7c3aed;
-          color: white;
-          box-shadow: 0 4px 14px rgba(124, 58, 237, 0.3);
-          transform: translateY(-2px);
-        }
-        .followup-btn:hover::before {
-          opacity: 1;
-        }
-        .followup-btn:active {
-          transform: translateY(0) scale(0.96);
-          box-shadow: 0 2px 8px rgba(124, 58, 237, 0.2);
-        }
+        /* followup buttons are now rendered as React components outside the bubble */
 
         /* ---- Add child card ---- */
         .add-child-card {

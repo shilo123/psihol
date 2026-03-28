@@ -55,13 +55,21 @@ router.post('/children', async (req, res) => {
     const user = await getUserFromToken(req);
     if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
-    const { name, birthDate, gender, personality } = req.body;
+    const { name, birthDate, age, gender, personality } = req.body;
     if (!name) return res.status(400).json({ error: 'Child name is required' });
+
+    // If age is provided instead of birthDate, calculate birthDate from age
+    let resolvedBirthDate = birthDate || '';
+    if (!resolvedBirthDate && age !== undefined && age !== '') {
+      const now = new Date();
+      const birthYear = now.getFullYear() - parseInt(age, 10);
+      resolvedBirthDate = new Date(birthYear, now.getMonth(), now.getDate()).toISOString();
+    }
 
     const child = {
       id: uuidv4(),
       name,
-      birthDate: birthDate || '',
+      birthDate: resolvedBirthDate,
       gender: gender || '',
       personality: personality || ''
     };
@@ -82,14 +90,21 @@ router.put('/children/:id', async (req, res) => {
     const user = await getUserFromToken(req);
     if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
-    const { name, birthDate, gender, personality } = req.body;
+    const { name, birthDate, age, gender, personality } = req.body;
     const children = [...(user.children || [])];
     const childIndex = children.findIndex(c => c.id === req.params.id);
 
     if (childIndex === -1) return res.status(404).json({ error: 'Child not found' });
 
     if (name !== undefined) children[childIndex].name = name;
-    if (birthDate !== undefined) children[childIndex].birthDate = birthDate;
+    if (birthDate !== undefined) {
+      children[childIndex].birthDate = birthDate;
+    } else if (age !== undefined && age !== '') {
+      // Convert age to birthDate
+      const now = new Date();
+      const birthYear = now.getFullYear() - parseInt(age, 10);
+      children[childIndex].birthDate = new Date(birthYear, now.getMonth(), now.getDate()).toISOString();
+    }
     if (gender !== undefined) children[childIndex].gender = gender;
     if (personality !== undefined) children[childIndex].personality = personality;
 
