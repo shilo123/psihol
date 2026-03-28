@@ -449,6 +449,7 @@ router.post('/conversations/:id/messages', async (req, res) => {
 
     const { content } = req.body;
     if (!content) return res.status(400).json({ error: 'Message content is required' });
+    if (content.length > 5000) return res.status(400).json({ error: 'ההודעה ארוכה מדי. מקסימום 5000 תווים.' });
 
     const conversation = await getConversationById(req.params.id, user.id);
     if (!conversation) return res.status(404).json({ error: 'Conversation not found' });
@@ -543,6 +544,7 @@ router.post('/temp', async (req, res) => {
     const user = await getUserFromToken(req);
     const { content, history } = req.body;
     if (!content) return res.status(400).json({ error: 'Message content is required' });
+    if (content.length > 5000) return res.status(400).json({ error: 'ההודעה ארוכה מדי. מקסימום 5000 תווים.' });
 
     const [systemPrompt, technicalPrompt] = await Promise.all([getSystemPrompt(), getTechnicalPrompt()]);
     const memories = user ? await getMemories(user.id) : [];
