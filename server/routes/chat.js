@@ -112,7 +112,19 @@ function buildSystemMessage(systemPrompt, technicalPrompt, user, memories = []) 
   const registeredNames = (user.children && user.children.length > 0)
     ? user.children.map(c => c.name).join(', ')
     : 'אין ילדים רשומים';
-  const resolvedTechnicalPrompt = technicalPrompt.replace('{REGISTERED_CHILDREN}', registeredNames);
+  // Replace {REGISTERED_CHILDREN_DETAILS} with detailed child info for update detection
+  const personalityHeb = { sensitive: 'רגיש/ה', stubborn: 'עקשן/ית', anxious: 'חרדתי/ת', energetic: 'אנרגטי/ת', calm: 'רגוע/ה' };
+  const registeredDetails = (user.children && user.children.length > 0)
+    ? user.children.map(c => {
+        const age = c.birthDate ? Math.floor((Date.now() - new Date(c.birthDate).getTime()) / (365.25 * 86400000)) : (c.age || '?');
+        const gender = c.gender === 'girl' ? 'בת' : 'בן';
+        const pers = personalityHeb[c.personality] || c.personality || '';
+        return `${c.name} (${gender}, גיל ${age}, אופי: ${pers})`;
+      }).join('; ')
+    : 'אין ילדים רשומים';
+  const resolvedTechnicalPrompt = technicalPrompt
+    .replace('{REGISTERED_CHILDREN}', registeredNames)
+    .replace('{REGISTERED_CHILDREN_DETAILS}', registeredDetails);
   contextParts.push('\n' + resolvedTechnicalPrompt);
 
   // Multi-child selection instructions (dynamic, depends on user's children)

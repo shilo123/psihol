@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '../../shared/authStore'
 import { useChatStore } from '../../shared/chatStore'
-import { formatTime, renderMarkdown, extractAddChildData, extractFollowups, PERSONALITIES } from '../../shared/constants'
+import { formatTime, renderMarkdown, extractAddChildData, extractUpdateChildData, extractFollowups, PERSONALITIES } from '../../shared/constants'
 import { api } from '../../shared/api'
 import allSuggestions from '../../shared/suggestions.json'
 
@@ -477,6 +477,9 @@ export default function ChatPage() {
   const [addChildData, setAddChildData] = useState(null) // { name, age, personality }
   const [dismissedChildren, setDismissedChildren] = useState(new Set())
   const lastCheckedMsgId = useRef(null)
+  // Update child detection from AI responses
+  const [updateChildData, setUpdateChildData] = useState(null) // { name, field, value, childId }
+  const [dismissedUpdates, setDismissedUpdates] = useState(new Set())
 
   useEffect(() => {
     if (messages.length === 0 || sending) return
@@ -484,15 +487,28 @@ export default function ChatPage() {
     if (lastMsg.role !== 'assistant' || lastMsg.id === lastCheckedMsgId.current) return
     lastCheckedMsgId.current = lastMsg.id
 
+    // Check for new child
     const childData = extractAddChildData(lastMsg.content)
-    if (!childData) return
+    if (childData) {
+      const isRegistered = user?.children?.some(c => c.name === childData.name)
+      if (!isRegistered && !dismissedChildren.has(childData.name)) {
+        setAddChildData(childData)
+        return
+      }
+    }
 
-    // Check if child is already registered
-    const isRegistered = user?.children?.some(c => c.name === childData.name)
-    if (isRegistered || dismissedChildren.has(childData.name)) return
-
-    setAddChildData(childData)
-  }, [messages, sending, user, dismissedChildren])
+    // Check for child update
+    const updateData = extractUpdateChildData(lastMsg.content)
+    if (updateData) {
+      const existingChild = user?.children?.find(c => c.name === updateData.name)
+      if (existingChild) {
+        const updateKey = `${updateData.name}:${updateData.field}:${updateData.value}`
+        if (!dismissedUpdates.has(updateKey)) {
+          setUpdateChildData({ ...updateData, childId: existingChild.id })
+        }
+      }
+    }
+  }, [messages, sending, user, dismissedChildren, dismissedUpdates])
 
   // Long-press context menu for conversations
   const [contextMenu, setContextMenu] = useState(null) // { convId, convTitle, x, y }
@@ -1632,6 +1648,72 @@ export default function ChatPage() {
             setAddChildData(null)
           }}
         />
+      )}
+
+      {/* ---- Update Child Confirmation ---- */}
+      {updateChildData && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" onClick={() => {
+          setDismissedUpdates(prev => new Set([...prev, `${updateChildData.name}:${updateChildData.field}:${updateChildData.value}`]))
+          setUpdateChildData(null)
+        }}>
+          <div className="absolute inset-0 bg-black/40" />
+          <div className="relative bg-white dark:bg-surface-dark rounded-2xl shadow-2xl w-[92vw] sm:w-full max-w-sm p-6 anim-pop-in text-center" onClick={e => e.stopPropagation()}>
+            <div className="size-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+              <span className="material-symbols-rounded text-primary text-3xl">edit_note</span>
+            </div>
+            <h3 className="text-lg font-bold text-text-main mb-2">עדכון פרטי ילד</h3>
+            <p className="text-sm text-text-muted leading-relaxed mb-5">
+              {updateChildData.field === 'age' && `שמנו לב שהגיל של ${updateChildData.name} השתנה ל-${updateChildData.value}. לעדכן?`}
+              {updateChildData.field === 'name' && `שמנו לב ששמו של הילד השתנה ל-${updateChildData.value}. לעדכן?`}
+              {updateChildData.field === 'personality' && (() => {
+                const persHeb = { sensitive: 'רגיש/ה', stubborn: 'עקשן/ית', anxious: 'חרדתי/ת', energetic: 'אנרגטי/ת', calm: 'רגוע/ה' };
+                return `שמנו לב שהאופי של ${updateChildData.name} השתנה ל${persHeb[updateChildData.value] || updateChildData.value}. לעדכן?`;
+              })()}
+              {updateChildData.field === 'gender' && `שמנו לב שהמגדר של ${updateChildData.name} השתנה. לעדכן?`}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={async () => {
+                  try {
+                    await api.updateChild(updateChildData.childId, { [updateChildData.field]: updateChildData.value })
+                    // Update local state
+                    const currentUser = useAuthStore.getState().user
+                    if (currentUser) {
+                      const updatedChildren = currentUser.children.map(c => {
+                        if (c.id !== updateChildData.childId) return c
+                        const updated = { ...c }
+                        if (updateChildData.field === 'age') {
+                          const now = new Date()
+                          const birthYear = now.getFullYear() - parseInt(updateChildData.value, 10)
+                          updated.birthDate = new Date(birthYear, now.getMonth(), now.getDate()).toISOString()
+                        } else {
+                          updated[updateChildData.field] = updateChildData.value
+                        }
+                        return updated
+                      })
+                      useAuthStore.setState({ user: { ...currentUser, children: updatedChildren } })
+                    }
+                    setUpdateChildData(null)
+                  } catch {
+                    setUpdateChildData(null)
+                  }
+                }}
+                className="flex-1 py-3 bg-gradient-to-l from-primary to-purple-600 text-white font-bold rounded-xl text-sm active:scale-[0.97] transition-transform"
+              >
+                כן, עדכנו
+              </button>
+              <button
+                onClick={() => {
+                  setDismissedUpdates(prev => new Set([...prev, `${updateChildData.name}:${updateChildData.field}:${updateChildData.value}`]))
+                  setUpdateChildData(null)
+                }}
+                className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 text-text-main dark:text-gray-300 font-bold rounded-xl text-sm active:scale-[0.97] transition-transform"
+              >
+                לא, תודה
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ---- Inline styles for typing animation ---- */}

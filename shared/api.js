@@ -97,6 +97,7 @@ export const api = {
   updateProfile: (data) => apiRequest('/api/user/profile', { method: 'PUT', body: JSON.stringify(data) }),
   getChildren: () => apiRequest('/api/user/children'),
   addChild: (data) => apiRequest('/api/user/children', { method: 'POST', body: JSON.stringify(data) }),
+  updateChild: (id, data) => apiRequest(`/api/user/children/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteAccount: () => apiRequest('/api/user/account', { method: 'DELETE' }),
 
   // Admin

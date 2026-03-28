@@ -65,6 +65,18 @@ export function extractAddChildData(text) {
   }
 }
 
+// Extract update_child data from AI response text
+export function extractUpdateChildData(text) {
+  if (!text) return null
+  const match = text.match(/\[\[update_child:([^:\]]+):(\w+)=([^\]]+)\]\]/)
+  if (!match) return null
+  return {
+    name: match[1].trim(),
+    field: match[2].trim(),
+    value: match[3].trim(),
+  }
+}
+
 export function renderMarkdown(text) {
   if (!text) return ''
   return text
@@ -86,8 +98,9 @@ export function renderMarkdown(text) {
     .replace(/((?:<li.*?<\/li>\n?)+)/g, '<ul class="space-y-2 my-3 list-none p-0">$1</ul>')
     .replace(/\s*\[\[memory:[^\]]+\]\]/g, '')
     .replace(/\s*\[\[confidence:\d+\]\]/g, '')
-    // Add child tags - cleaned from display, handled by React popup
+    // Add/update child tags - cleaned from display, handled by React popup
     .replace(/\s*\[\[add_child:[^\]]+\]\]/g, '')
+    .replace(/\s*\[\[update_child:[^\]]+\]\]/g, '')
     // Follow-up tags - cleaned from display, rendered as React component outside bubble
     .replace(/\s*\[\[followup:[^\]]+\]\]/g, '')
     .replace(/\n\n/g, '</p><p class="mt-3">')
