@@ -16,6 +16,7 @@ import {
   addMemory,
   getSetting,
   saveLowConfidenceQuestion,
+  DEFAULT_TECHNICAL_PROMPT,
 } from '../db.js';
 
 const router = Router();
@@ -520,7 +521,7 @@ router.post('/temp', async (req, res) => {
       [user, systemPrompt, technicalPrompt] = await Promise.all([
         getUserFromToken(req).catch(() => null),
         getSystemPrompt().catch(() => FALLBACK_PROMPT),
-        getTechnicalPrompt().catch(() => ''),
+        getTechnicalPrompt().catch(() => DEFAULT_TECHNICAL_PROMPT),
       ]);
       if (user) memories = await getMemories(user.id).catch(() => []);
     } catch { /* DB down — proceed with defaults */ }

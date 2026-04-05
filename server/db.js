@@ -209,7 +209,7 @@ export async function setSystemPrompt(prompt) {
   await setSetting('systemPrompt', prompt);
 }
 
-const DEFAULT_TECHNICAL_PROMPT = `*** טעות נפוצה ***
+export const DEFAULT_TECHNICAL_PROMPT = `*** טעות נפוצה ***
 אם יש טעות נפוצה שהורים עושים בנושא שנשאל, הוסיפי תג מיוחד בסוף התשובה:
 [[common_mistake:טקסט קצר של הטעות הנפוצה]]
 לדוגמה: [[common_mistake:הורים רבים מגיבים בצעקות, מה שמחזק את ההתנהגות במקום להפחית אותה.]]
