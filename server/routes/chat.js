@@ -541,13 +541,21 @@ router.post('/conversations/:id/messages', async (req, res) => {
 // POST /temp - Temporary chat (authenticated but NOT saved to DB)
 router.post('/temp', async (req, res) => {
   try {
-    const user = await getUserFromToken(req);
     const { content, history } = req.body;
     if (!content) return res.status(400).json({ error: 'Message content is required' });
     if (content.length > 5000) return res.status(400).json({ error: 'ההודעה ארוכה מדי. מקסימום 5000 תווים.' });
 
-    const [systemPrompt, technicalPrompt] = await Promise.all([getSystemPrompt(), getTechnicalPrompt()]);
-    const memories = user ? await getMemories(user.id) : [];
+    // Resilient to DB failures — fallback to defaults if DB is down
+    const FALLBACK_PROMPT = 'את מדריכת הורים מוסמכת עם ניסיון של שנים רבות. את מדברת בעברית, בטון חם, אמפתי ומקצועי. את נותנת עצות מעשיות ומותאמות אישית לפי גיל הילד והאתגר הספציפי. את לא פסיכולוגית - את מדריכת הורים. את משתמשת בשיטות מבוססות מחקר.';
+    let user = null, systemPrompt = FALLBACK_PROMPT, technicalPrompt = '', memories = [];
+    try {
+      [user, systemPrompt, technicalPrompt] = await Promise.all([
+        getUserFromToken(req).catch(() => null),
+        getSystemPrompt().catch(() => FALLBACK_PROMPT),
+        getTechnicalPrompt().catch(() => ''),
+      ]);
+      if (user) memories = await getMemories(user.id).catch(() => []);
+    } catch { /* DB down — proceed with defaults */ }
     const systemMessage = user ? buildSystemMessage(systemPrompt, technicalPrompt, user, memories) : systemPrompt;
 
     const userMessage = {
