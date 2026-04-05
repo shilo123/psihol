@@ -161,7 +161,10 @@ router.post('/google', async (req, res) => {
     res.json({ token, user: sanitizeUser(user) });
   } catch (error) {
     console.error('Google login error:', error);
-    res.status(500).json({ error: 'שגיאה פנימית' });
+    const msg = error.message?.includes('MONGODB_URI')
+      ? 'שגיאת חיבור למסד נתונים — MONGODB_URI לא מוגדר'
+      : 'שגיאה פנימית בשרת: ' + (error.message || 'unknown');
+    res.status(500).json({ error: msg });
   }
 });
 
@@ -258,7 +261,10 @@ router.post('/guest', async (req, res) => {
     res.json({ token, user: sanitizeUser(user) });
   } catch (error) {
     console.error('Guest login error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    const msg = error.message?.includes('MONGODB_URI')
+      ? 'שגיאת חיבור למסד נתונים — MONGODB_URI לא מוגדר'
+      : 'שגיאה פנימית בשרת: ' + (error.message || 'unknown');
+    res.status(500).json({ error: msg });
   }
 });
 
