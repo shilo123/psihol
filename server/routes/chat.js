@@ -152,38 +152,6 @@ function calculateAge(birthDate) {
   return `${years} שנים`;
 }
 
-function generateMockResponse() {
-  const responses = [
-    `אני שומעת אותך, וקודם כל רוצה להגיד לך שזה לגמרי טבעי להרגיש ככה 💛
-
-1. **נשימה עמוקה** - לפני שמגיבים, קחו נשימה עמוקה אחת 🧘
-2. **הכרה ברגש** - במקום "אל תבכה", נסו "אני רואה שאתה עצוב" 🫂
-3. **הצעת בחירות** - תנו לילד שתי אפשרויות מקובלות עליכם 🎯
-
-רוצה שנעמיק? 😊`,
-
-    `את/ה לא לבד בזה 🌟
-
-1. **ההתנהגות היא תקשורת** - ילדים מנסים לתקשר משהו 🤔
-2. **חיבור לפני תיקון** - קודם מתחברים לרגש, אחר כך מטפלים 💕
-3. **גבולות עם אהבה** - גבול ברור + אמפתיה = ילד שמרגיש בטוח 🛡️
-
-אשמח לשמוע עוד! 😊`,
-  ];
-  return responses[Math.floor(Math.random() * responses.length)];
-}
-
-async function streamMockResponse(res, text) {
-  let i = 0;
-  while (i < text.length) {
-    const chunkSize = Math.min(2 + Math.floor(Math.random() * 3), text.length - i);
-    const chunk = text.slice(i, i + chunkSize);
-    res.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\n\n`);
-    i += chunkSize;
-    await new Promise(r => setTimeout(r, 15 + Math.random() * 25));
-  }
-}
-
 // Summarize old messages when history is too long
 async function summarizeHistory(messages) {
   if (!getOpenAIKey() || messages.length <= MAX_MESSAGES_BEFORE_SUMMARY) {
@@ -271,6 +239,7 @@ async function streamOpenAI(res, messages) {
 
   if (getOpenAIKey()) {
     try {
+      const temperature = await getSetting('chatTemperature').catch(() => null);
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -280,7 +249,7 @@ async function streamOpenAI(res, messages) {
         body: JSON.stringify({
           model: 'gpt-4.1',
           messages,
-          temperature: parseFloat(await getSetting('chatTemperature')) || 0.7,
+          temperature: parseFloat(temperature) || 0.7,
           max_tokens: 1000,
           stream: true,
           stream_options: { include_usage: true },
@@ -288,54 +257,52 @@ async function streamOpenAI(res, messages) {
       });
 
       if (!response.ok) {
-        console.error('OpenAI API error:', response.status);
-        fullContent = generateMockResponse();
-        await streamMockResponse(res, fullContent);
-      } else {
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        let usage = null;
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop();
-
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed || !trimmed.startsWith('data: ')) continue;
-            const payload = trimmed.slice(6);
-            if (payload === '[DONE]') continue;
-            try {
-              const parsed = JSON.parse(payload);
-              const delta = parsed.choices?.[0]?.delta?.content;
-              if (delta) {
-                fullContent += delta;
-                res.write(`data: ${JSON.stringify({ type: 'chunk', content: delta })}\n\n`);
-              }
-              // Capture usage from final chunk
-              if (parsed.usage) usage = parsed.usage;
-            } catch {}
-          }
-        }
-
-        // Track token usage
-        const inputTokens = usage?.prompt_tokens || estimateTokens(messages.map(m => m.content).join(''));
-        const outputTokens = usage?.completion_tokens || estimateTokens(fullContent);
-        trackTokenUsage({ inputTokens, outputTokens, model: 'gpt-4.1' }).catch(e => console.error('Token tracking error:', e));
+        const errText = await response.text().catch(() => '');
+        console.error('OpenAI API error:', response.status, errText);
+        throw new Error(`שגיאת OpenAI (${response.status})`);
       }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let usage = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith('data: ')) continue;
+          const payload = trimmed.slice(6);
+          if (payload === '[DONE]') continue;
+          try {
+            const parsed = JSON.parse(payload);
+            const delta = parsed.choices?.[0]?.delta?.content;
+            if (delta) {
+              fullContent += delta;
+              res.write(`data: ${JSON.stringify({ type: 'chunk', content: delta })}\n\n`);
+            }
+            if (parsed.usage) usage = parsed.usage;
+          } catch {}
+        }
+      }
+
+      // Track token usage (non-blocking, ignore DB errors)
+      const inputTokens = usage?.prompt_tokens || estimateTokens(messages.map(m => m.content).join(''));
+      const outputTokens = usage?.completion_tokens || estimateTokens(fullContent);
+      trackTokenUsage({ inputTokens, outputTokens, model: 'gpt-4.1' }).catch(() => {});
+
     } catch (error) {
       console.error('OpenAI stream failed:', error);
-      fullContent = generateMockResponse();
-      await streamMockResponse(res, fullContent);
+      throw error; // Propagate to caller — don't fake a response
     }
   } else {
-    console.log('[MOCK MODE] No OPENAI_API_KEY set.', 'env check:', !!process.env.OPENAI_API_KEY);
-    fullContent = generateMockResponse();
-    await streamMockResponse(res, fullContent);
+    console.error('[ERROR] No OPENAI_API_KEY set.');
+    throw new Error('מפתח OpenAI לא מוגדר בשרת');
   }
 
   return fullContent;
@@ -529,10 +496,11 @@ router.post('/conversations/:id/messages', async (req, res) => {
     res.end();
   } catch (error) {
     console.error('Send message error:', error);
+    const errMsg = error.message || 'שגיאה פנימית בשרת';
     if (!res.headersSent) {
-      res.status(500).json({ error: 'Internal server error' });
+      res.status(500).json({ error: errMsg });
     } else {
-      res.write(`data: ${JSON.stringify({ type: 'error', error: 'Internal server error' })}\n\n`);
+      res.write(`data: ${JSON.stringify({ type: 'error', error: errMsg })}\n\n`);
       res.end();
     }
   }
@@ -593,10 +561,11 @@ router.post('/temp', async (req, res) => {
     res.end();
   } catch (error) {
     console.error('Temp chat error:', error);
+    const errMsg = error.message || 'שגיאה פנימית בשרת';
     if (!res.headersSent) {
-      res.status(500).json({ error: 'Internal server error' });
+      res.status(500).json({ error: errMsg });
     } else {
-      res.write(`data: ${JSON.stringify({ type: 'error', error: 'Internal server error' })}\n\n`);
+      res.write(`data: ${JSON.stringify({ type: 'error', error: errMsg })}\n\n`);
       res.end();
     }
   }
