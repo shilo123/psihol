@@ -46,6 +46,20 @@ export function calculateAge(birthDate) {
   return `${years} שנים ו-${months} חודשים`
 }
 
+// Extract common_mistake from AI response text
+export function extractCommonMistake(text) {
+  if (!text) return null
+  const match = text.match(/\[\[common_mistake:([^\]]+)\]\]/)
+  return match ? match[1].trim() : null
+}
+
+// Extract follow_up_question from AI response text
+export function extractFollowUpQuestion(text) {
+  if (!text) return null
+  const match = text.match(/\[\[follow_up_question:([^\]]+)\]\]/)
+  return match ? match[1].trim() : null
+}
+
 // Extract followup questions from AI response text
 export function extractFollowups(text) {
   if (!text) return []
@@ -101,6 +115,9 @@ export function renderMarkdown(text) {
     // Add/update child tags - cleaned from display, handled by React popup
     .replace(/\s*\[\[add_child:[^\]]+\]\]/g, '')
     .replace(/\s*\[\[update_child:[^\]]+\]\]/g, '')
+    // Common mistake & follow-up question tags - cleaned, rendered separately by React
+    .replace(/\s*\[\[common_mistake:[^\]]+\]\]/g, '')
+    .replace(/\s*\[\[follow_up_question:[^\]]+\]\]/g, '')
     // Follow-up tags - cleaned from display, rendered as React component outside bubble
     .replace(/\s*\[\[followup:[^\]]+\]\]/g, '')
     .replace(/\n\n/g, '</p><p class="mt-3">')

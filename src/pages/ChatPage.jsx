@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '../../shared/authStore'
 import { useChatStore } from '../../shared/chatStore'
-import { formatTime, renderMarkdown, extractAddChildData, extractUpdateChildData, extractFollowups, PERSONALITIES } from '../../shared/constants'
+import { formatTime, renderMarkdown, extractAddChildData, extractUpdateChildData, extractFollowups, extractCommonMistake, extractFollowUpQuestion, PERSONALITIES } from '../../shared/constants'
 import { api } from '../../shared/api'
 import allSuggestions from '../../shared/suggestions.json'
 
@@ -1223,6 +1223,20 @@ export default function ChatPage() {
                                   // followup buttons are now rendered outside the bubble as React components
                                 }}
                               />
+                              {/* Common mistake — subtle note */}
+                              {(() => {
+                                const mistake = extractCommonMistake(msg.content)
+                                if (!mistake) return null
+                                return (
+                                  <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700/50 flex items-start gap-2">
+                                    <span className="material-symbols-rounded text-amber-500 text-sm mt-0.5 shrink-0">lightbulb</span>
+                                    <p className="text-xs text-text-muted dark:text-gray-400 leading-relaxed">
+                                      <span className="font-semibold text-amber-600 dark:text-amber-400">טעות נפוצה: </span>
+                                      {mistake}
+                                    </p>
+                                  </div>
+                                )
+                              })()}
                             </div>
                             {/* Actions — visible on mobile, hover on desktop */}
                             <div className="flex items-center gap-1 px-5 pb-4 pt-1 border-t border-gray-50 dark:border-gray-800 md:opacity-0 md:hover:opacity-100 md:focus-within:opacity-100 transition-opacity duration-200 action-bar">
@@ -1339,6 +1353,26 @@ export default function ChatPage() {
             <div className="h-12 bg-gradient-to-t from-chat-bg dark:from-background-dark to-transparent pointer-events-none" />
 
             <div className="bg-chat-bg dark:bg-background-dark px-3 sm:px-4 md:px-8 pb-5">
+              {/* Follow-up question — above input */}
+              {(() => {
+                const lastAiMsg = [...messages].reverse().find(m => m.role === 'assistant')
+                const fuq = lastAiMsg ? extractFollowUpQuestion(lastAiMsg.content) : null
+                if (!fuq || sending) return null
+                return (
+                  <div className="max-w-3xl mx-auto mb-2">
+                    <button
+                      onClick={() => { if (!sending) sendMessage(fuq) }}
+                      className="w-full flex items-start gap-2.5 px-4 py-2.5 bg-white dark:bg-surface-dark border border-primary/20 rounded-xl text-right hover:border-primary/40 active:scale-[0.99] transition-all"
+                    >
+                      <span className="material-symbols-rounded text-primary text-sm mt-0.5 shrink-0">reply</span>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[11px] font-semibold text-primary block mb-0.5">הגב לשאלה</span>
+                        <span className="text-xs text-text-main dark:text-gray-300 leading-relaxed">{fuq}</span>
+                      </div>
+                    </button>
+                  </div>
+                )
+              })()}
               <form
                 onSubmit={handleSend}
                 className="max-w-3xl mx-auto relative bg-white dark:bg-surface-dark rounded-2xl border border-gray-200 dark:border-gray-700 shadow-lg shadow-gray-200/50 dark:shadow-none focus-within:border-primary/40 focus-within:shadow-xl focus-within:shadow-primary/8 transition-all duration-300"
