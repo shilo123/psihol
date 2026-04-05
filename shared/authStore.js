@@ -7,6 +7,7 @@ export const useAuthStore = create((set, get) => ({
   token: typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null,
   isGuest: false,
   loading: false,
+  dbError: false,
 
   get isLoggedIn() { return !!get().token },
   get isOnboarded() {
@@ -34,10 +35,11 @@ export const useAuthStore = create((set, get) => ({
         throw new Error('תשובה לא תקינה מהשרת')
       }
       if (typeof localStorage !== 'undefined') localStorage.setItem('token', data.token)
-      set({ token: data.token, user: data.user, isGuest: true, loading: false })
+      set({ token: data.token, user: data.user, isGuest: true, loading: false, dbError: false })
       return data.user
     } catch (err) {
-      set({ loading: false })
+      const isDbError = /ENOTFOUND|MONGODB|מסד נתונים|timeout|שרת לא הגיב/i.test(err.message || '')
+      set({ loading: false, dbError: isDbError || get().dbError })
       toast.error(err.message || 'שגיאה ביצירת חשבון אורח. נסו שוב.')
       return null
     }
@@ -88,7 +90,8 @@ export const useAuthStore = create((set, get) => ({
       set({ token: data.token, user: data.user, isGuest: false, loading: false })
       return data.user
     } catch (err) {
-      set({ loading: false })
+      const isDbError = /ENOTFOUND|MONGODB|מסד נתונים|timeout|שרת לא הגיב/i.test(err.message || '')
+      set({ loading: false, dbError: isDbError || get().dbError })
       toast.error(err.message || 'שגיאה בהתחברות דרך גוגל')
       return null
     }
@@ -105,6 +108,20 @@ export const useAuthStore = create((set, get) => ({
       toast.error('שגיאה בשמירת הפרטים. נסו שוב.')
       return null
     }
+  },
+
+  loginOffline: () => {
+    const token = 'offline-guest-' + Date.now()
+    const user = {
+      id: token,
+      name: 'אורח',
+      parentName: 'אורח',
+      children: [],
+      challenges: [],
+      isGuest: true,
+      isOffline: true,
+    }
+    set({ token, user, isGuest: true, loading: false, dbError: false })
   },
 
   logout: () => {

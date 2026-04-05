@@ -409,6 +409,8 @@ export default function ChatPage() {
   const signup = useAuthStore((s) => s.signup)
   const googleLogin = useAuthStore((s) => s.googleLogin)
   const loginAsGuest = useAuthStore((s) => s.loginAsGuest)
+  const loginOffline = useAuthStore((s) => s.loginOffline)
+  const dbError = useAuthStore((s) => s.dbError)
   const logout = useAuthStore((s) => s.logout)
 
   const isOnboarded =
@@ -518,11 +520,16 @@ export default function ChatPage() {
 
   /* ---- Effects ---- */
   // Load conversations on login (only after user is validated by init)
+  // Offline users go straight to temp chat — no DB available
   useEffect(() => {
     if (isLoggedIn && user) {
-      loadConversations()
+      if (user.isOffline) {
+        startTempChat()
+      } else {
+        loadConversations()
+      }
     }
-  }, [isLoggedIn, user, loadConversations])
+  }, [isLoggedIn, user, loadConversations, startTempChat])
 
   // On landing, always start with a fresh new conversation view (no auto-select)
   // The user sees the welcome screen and can start typing or pick an old chat from sidebar
@@ -833,6 +840,17 @@ export default function ChatPage() {
               )}
               <span>{loading ? 'נכנס...' : 'נסו בחינם'}</span>
             </button>
+
+            {/* DB error fallback — offline mode */}
+            {dbError && (
+              <button
+                onClick={loginOffline}
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-amber-50 border border-amber-300 rounded-2xl text-amber-700 font-semibold text-sm mb-4 hover:bg-amber-100 active:scale-[0.98] transition-all"
+              >
+                <span className="material-symbols-rounded text-base">cloud_off</span>
+                <span>שגיאה ב-DB — כניסה ללא שמירה</span>
+              </button>
+            )}
 
             {/* Social proof */}
             <div className="flex items-center justify-center gap-2 mb-4 anim-fade-in anim-delay-4">
