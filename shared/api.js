@@ -12,10 +12,25 @@ export async function apiRequest(path, options = {}) {
     ...options.headers,
   }
 
-  const res = await fetch(`${BASE_URL}${path}`, {
-    ...options,
-    headers,
-  })
+  // Timeout after 15 seconds to prevent infinite loading
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 15000)
+
+  let res
+  try {
+    res = await fetch(`${BASE_URL}${path}`, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    })
+  } catch (err) {
+    clearTimeout(timeout)
+    if (err.name === 'AbortError') {
+      throw new Error('הבקשה נכשלה — השרת לא הגיב בזמן. נסו שוב.')
+    }
+    throw new Error('שגיאת רשת — בדקו את החיבור לאינטרנט.')
+  }
+  clearTimeout(timeout)
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ error: 'Request failed' }))

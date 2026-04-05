@@ -13,7 +13,10 @@ export async function getDb() {
     throw new Error('MONGODB_URI is not set');
   }
 
-  client = new MongoClient(uri);
+  client = new MongoClient(uri, {
+    connectTimeoutMS: 10000,
+    serverSelectionTimeoutMS: 10000,
+  });
   await client.connect();
   db = client.db(DB_NAME);
 

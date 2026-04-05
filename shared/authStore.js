@@ -30,12 +30,15 @@ export const useAuthStore = create((set, get) => ({
     set({ loading: true })
     try {
       const data = await api.loginAsGuest()
+      if (!data?.token) {
+        throw new Error('תשובה לא תקינה מהשרת')
+      }
       if (typeof localStorage !== 'undefined') localStorage.setItem('token', data.token)
       set({ token: data.token, user: data.user, isGuest: true, loading: false })
       return data.user
-    } catch {
+    } catch (err) {
       set({ loading: false })
-      toast.error('שגיאה ביצירת חשבון אורח. נסו שוב.')
+      toast.error(err.message || 'שגיאה ביצירת חשבון אורח. נסו שוב.')
       return null
     }
   },
@@ -44,6 +47,9 @@ export const useAuthStore = create((set, get) => ({
     set({ loading: true })
     try {
       const data = await api.login({ email, password })
+      if (!data?.token) {
+        throw new Error('תשובה לא תקינה מהשרת')
+      }
       if (typeof localStorage !== 'undefined') localStorage.setItem('token', data.token)
       set({ token: data.token, user: data.user, isGuest: false, loading: false })
       return data.user
@@ -58,6 +64,9 @@ export const useAuthStore = create((set, get) => ({
     set({ loading: true })
     try {
       const data = await api.signup({ name, email, password })
+      if (!data?.token) {
+        throw new Error('תשובה לא תקינה מהשרת')
+      }
       if (typeof localStorage !== 'undefined') localStorage.setItem('token', data.token)
       set({ token: data.token, user: data.user, isGuest: false, loading: false })
       return data.user
@@ -72,6 +81,9 @@ export const useAuthStore = create((set, get) => ({
     set({ loading: true })
     try {
       const data = await api.googleLogin(credential)
+      if (!data?.token) {
+        throw new Error('תשובה לא תקינה מהשרת')
+      }
       if (typeof localStorage !== 'undefined') localStorage.setItem('token', data.token)
       set({ token: data.token, user: data.user, isGuest: false, loading: false })
       return data.user
