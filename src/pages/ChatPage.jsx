@@ -440,6 +440,8 @@ export default function ChatPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [copiedId, setCopiedId] = useState(null)
   const [likedIds, setLikedIds] = useState(new Set())
+  const [planBannerDismissed, setPlanBannerDismissed] = useState(false)
+  const [planBannerClicked, setPlanBannerClicked] = useState(false)
 
   /* ---- Refs ---- */
   const scrollRef = useRef(null)
@@ -697,6 +699,8 @@ export default function ChatPage() {
   async function handleNewConversation() {
     const conv = await createConversation()
     if (conv) setSidebarOpen(false)
+    setPlanBannerDismissed(false)
+    setPlanBannerClicked(false)
   }
 
   function handleCopy(text, id) {
@@ -1208,9 +1212,9 @@ export default function ChatPage() {
                   const isLastAI = !isUser && (idx === messages.length - 1 || messages[idx + 1]?.role === 'user')
                   return (
                     <div key={msg.id} className={`flex ${isUser ? 'justify-end' : 'justify-start'} gap-3 msg-entrance`} style={{ animationDelay: `${Math.min(idx * 50, 300)}ms` }}>
-                      {/* AI avatar */}
+                      {/* AI avatar — hidden on mobile */}
                       {!isUser && (
-                        <div className="shrink-0 size-9 rounded-2xl bg-gradient-to-br from-primary via-purple-500 to-pink-400 flex items-center justify-center shadow-lg shadow-primary/20 mt-1">
+                        <div className="shrink-0 size-9 rounded-2xl bg-gradient-to-br from-primary via-purple-500 to-pink-400 hidden sm:flex items-center justify-center shadow-lg shadow-primary/20 mt-1">
                           <span className="material-symbols-outlined text-white text-base" style={{ fontVariationSettings: "'FILL' 1" }}>psychology</span>
                         </div>
                       )}
@@ -1288,6 +1292,23 @@ export default function ChatPage() {
                           </div>
                         )}
 
+                        {/* Common mistake — outside the bubble */}
+                        {!isUser && (() => {
+                          const mistake = extractCommonMistake(msg.content)
+                          if (!mistake) return null
+                          return (
+                            <div className="mt-3 pr-1">
+                              <div className="flex items-start gap-2.5 px-3.5 py-2.5 rounded-lg bg-amber-50/80 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-800/30">
+                                <span className="material-symbols-rounded text-amber-500 dark:text-amber-400 text-[16px] mt-0.5 shrink-0">lightbulb</span>
+                                <div className="min-w-0">
+                                  <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 leading-none">טעות נפוצה</span>
+                                  <p className="text-[12.5px] text-amber-900/80 dark:text-amber-200/70 leading-relaxed mt-0.5">{mistake}</p>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })()}
+
                         {/* Follow-up questions — outside the bubble */}
                         {!isUser && (() => {
                           const followups = extractFollowups(msg.content)
@@ -1324,7 +1345,7 @@ export default function ChatPage() {
                 {/* Streaming AI response — empathetic thinking state */}
                 {sending && (
                   <div className="flex items-start gap-3 msg-entrance">
-                    <div className="shrink-0 size-9 rounded-2xl bg-gradient-to-br from-primary via-purple-500 to-pink-400 flex items-center justify-center shadow-lg shadow-primary/20 mt-1 avatar-breathing">
+                    <div className="shrink-0 size-9 rounded-2xl bg-gradient-to-br from-primary via-purple-500 to-pink-400 hidden sm:flex items-center justify-center shadow-lg shadow-primary/20 mt-1 avatar-breathing">
                       <span className="material-symbols-outlined text-white text-base" style={{ fontVariationSettings: "'FILL' 1" }}>psychology</span>
                     </div>
                     <div className="max-w-[92%] sm:max-w-[82%]">
@@ -1391,6 +1412,43 @@ export default function ChatPage() {
                   </div>
                 )
               })()}
+
+              {/* ── Boundary plan banner ── */}
+              {!planBannerDismissed && !sending && messages.filter(m => m.role === 'user').length >= 2 && (
+                <div className="max-w-3xl mx-auto mb-3 anim-fade-in-up">
+                  {!planBannerClicked ? (
+                    <div className="relative flex items-center gap-3 sm:gap-4 px-4 py-3 sm:py-3.5 bg-white dark:bg-surface-dark rounded-2xl border border-primary/20 dark:border-primary/30 shadow-sm">
+                      <button onClick={() => setPlanBannerDismissed(true)} className="absolute top-2 left-2 p-0.5 text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400 transition-colors">
+                        <span className="material-symbols-rounded text-[16px]">close</span>
+                      </button>
+                      <div className="shrink-0 size-10 sm:size-11 rounded-xl bg-primary/10 flex items-center justify-center">
+                        <span className="material-symbols-rounded text-primary text-xl sm:text-2xl">shield_person</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] sm:text-sm font-semibold text-text-main dark:text-gray-200 leading-snug">יש לנו תוכנית להצבת גבולות — מותאמת אישית למשפחה שלך</p>
+                        <p className="text-[11px] sm:text-xs text-text-muted dark:text-gray-400 mt-0.5 hidden sm:block">כלים מעשיים שעוזרים ליצור שגרה ברורה ובטוחה לילדים</p>
+                      </div>
+                      <button
+                        onClick={() => setPlanBannerClicked(true)}
+                        className="shrink-0 px-4 py-2 sm:py-2.5 bg-primary hover:bg-primary-dark text-white text-[12px] sm:text-[13px] font-semibold rounded-xl transition-colors"
+                      >
+                        לפרטים
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="relative flex flex-col items-center text-center px-5 py-5 bg-white dark:bg-surface-dark rounded-2xl border border-primary/20 dark:border-primary/30 shadow-sm">
+                      <button onClick={() => setPlanBannerDismissed(true)} className="absolute top-2 left-2 p-0.5 text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400 transition-colors">
+                        <span className="material-symbols-rounded text-[16px]">close</span>
+                      </button>
+                      <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-3">
+                        <span className="material-symbols-rounded text-primary text-2xl">construction</span>
+                      </div>
+                      <p className="text-sm font-bold text-text-main dark:text-gray-200">התוכנית בהכנה!</p>
+                      <p className="text-xs text-text-muted dark:text-gray-400 mt-1 max-w-xs">אנחנו עובדים על תוכנית מותאמת אישית להצבת גבולות. בקרוב תקבלו הודעה כשהיא מוכנה.</p>
+                    </div>
+                  )}
+                </div>
+              )}
               <form
                 onSubmit={handleSend}
                 className="max-w-3xl mx-auto relative bg-white dark:bg-surface-dark rounded-2xl border border-gray-200 dark:border-gray-700 shadow-lg shadow-gray-200/50 dark:shadow-none focus-within:border-primary/40 focus-within:shadow-xl focus-within:shadow-primary/8 transition-all duration-300"
@@ -1854,93 +1912,57 @@ export default function ChatPage() {
           display: inline-flex;
           flex-direction: column;
           align-items: center;
-          gap: 2px;
-          padding: 10px 22px;
-          margin: 4px 4px;
-          color: white;
-          border: none;
-          border-radius: 16px;
-          font-weight: 800;
-          font-size: 14px;
+          padding: 8px 20px 7px;
+          margin: 4px;
+          background: white;
+          border: 1.5px solid #e5e7eb;
+          border-radius: 10px;
           cursor: pointer;
-          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+          border-right: 3px solid #e5e7eb;
+          transition: border-color 0.2s, background 0.2s;
         }
+        .dark .child-select-btn { background: #1e293b; border-color: #334155; border-right-color: #334155; }
         .child-btn-name {
           font-size: 14px;
-          font-weight: 800;
+          font-weight: 600;
+          color: #1e293b;
+          line-height: 1.3;
         }
+        .dark .child-btn-name { color: #e2e8f0; }
         .child-btn-personality {
           font-size: 10px;
-          font-weight: 500;
-          opacity: 0.85;
+          font-weight: 400;
+          color: #9ca3af;
+          line-height: 1.2;
         }
-        .child-select-btn:hover {
-          transform: translateY(-3px) scale(1.03);
-          filter: brightness(1.1);
-        }
-        .child-select-btn:active {
-          transform: scale(0.93);
-        }
-        /* ---- Girl variants: softer/warmer hues ---- */
-        .child-sensitive-girl {
-          background: linear-gradient(135deg, #ec4899 0%, #f9a8d4 50%, #db2777 100%);
-          box-shadow: 0 4px 15px rgba(236, 72, 153, 0.35);
-        }
-        .child-sensitive-girl:hover { box-shadow: 0 8px 25px rgba(236, 72, 153, 0.45); }
-        .child-stubborn-girl {
-          background: linear-gradient(135deg, #f472b6 0%, #fb923c 50%, #e11d48 100%);
-          box-shadow: 0 4px 15px rgba(244, 114, 182, 0.35);
-        }
-        .child-stubborn-girl:hover { box-shadow: 0 8px 25px rgba(244, 114, 182, 0.45); }
-        .child-anxious-girl {
-          background: linear-gradient(135deg, #a78bfa 0%, #c4b5fd 50%, #7c3aed 100%);
-          box-shadow: 0 4px 15px rgba(167, 139, 250, 0.35);
-        }
-        .child-anxious-girl:hover { box-shadow: 0 8px 25px rgba(167, 139, 250, 0.45); }
-        .child-energetic-girl {
-          background: linear-gradient(135deg, #34d399 0%, #a7f3d0 50%, #059669 100%);
-          box-shadow: 0 4px 15px rgba(52, 211, 153, 0.35);
-        }
-        .child-energetic-girl:hover { box-shadow: 0 8px 25px rgba(52, 211, 153, 0.45); }
-        .child-calm-girl {
-          background: linear-gradient(135deg, #67e8f9 0%, #a5f3fc 50%, #06b6d4 100%);
-          box-shadow: 0 4px 15px rgba(103, 232, 249, 0.35);
-        }
-        .child-calm-girl:hover { box-shadow: 0 8px 25px rgba(103, 232, 249, 0.45); }
+        .child-select-btn:hover { background: #f9fafb; }
+        .dark .child-select-btn:hover { background: #253044; }
+        .child-select-btn:active { background: #f3f4f6; }
+        .dark .child-select-btn:active { background: #1a2332; }
 
-        /* ---- Boy variants: deeper/cooler hues ---- */
-        .child-sensitive-boy {
-          background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 50%, #1d4ed8 100%);
-          box-shadow: 0 4px 15px rgba(59, 130, 246, 0.35);
-        }
-        .child-sensitive-boy:hover { box-shadow: 0 8px 25px rgba(59, 130, 246, 0.45); }
-        .child-stubborn-boy {
-          background: linear-gradient(135deg, #f59e0b 0%, #f97316 50%, #ea580c 100%);
-          box-shadow: 0 4px 15px rgba(245, 158, 11, 0.35);
-        }
-        .child-stubborn-boy:hover { box-shadow: 0 8px 25px rgba(245, 158, 11, 0.45); }
-        .child-anxious-boy {
-          background: linear-gradient(135deg, #6366f1 0%, #818cf8 50%, #4f46e5 100%);
-          box-shadow: 0 4px 15px rgba(99, 102, 241, 0.35);
-        }
-        .child-anxious-boy:hover { box-shadow: 0 8px 25px rgba(99, 102, 241, 0.45); }
-        .child-energetic-boy {
-          background: linear-gradient(135deg, #10b981 0%, #34d399 50%, #047857 100%);
-          box-shadow: 0 4px 15px rgba(16, 185, 129, 0.35);
-        }
-        .child-energetic-boy:hover { box-shadow: 0 8px 25px rgba(16, 185, 129, 0.45); }
-        .child-calm-boy {
-          background: linear-gradient(135deg, #0284c7 0%, #38bdf8 50%, #0369a1 100%);
-          box-shadow: 0 4px 15px rgba(2, 132, 199, 0.35);
-        }
-        .child-calm-boy:hover { box-shadow: 0 8px 25px rgba(2, 132, 199, 0.45); }
+        /* ---- Accent by personality (right border only) ---- */
+        .child-accent-sensitive { border-right-color: #a78bfa; }
+        .child-accent-sensitive:hover { border-color: #c4b5fd; border-right-color: #8b5cf6; }
+        .child-accent-stubborn { border-right-color: #fbbf24; }
+        .child-accent-stubborn:hover { border-color: #fde68a; border-right-color: #f59e0b; }
+        .child-accent-anxious { border-right-color: #818cf8; }
+        .child-accent-anxious:hover { border-color: #a5b4fc; border-right-color: #6366f1; }
+        .child-accent-energetic { border-right-color: #34d399; }
+        .child-accent-energetic:hover { border-color: #86efac; border-right-color: #10b981; }
+        .child-accent-calm { border-right-color: #38bdf8; }
+        .child-accent-calm:hover { border-color: #7dd3fc; border-right-color: #0ea5e9; }
 
-        /* ---- Disabled child buttons (already selected) ---- */
+        .dark .child-accent-sensitive { border-right-color: #7c3aed; }
+        .dark .child-accent-stubborn { border-right-color: #d97706; }
+        .dark .child-accent-anxious { border-right-color: #4f46e5; }
+        .dark .child-accent-energetic { border-right-color: #059669; }
+        .dark .child-accent-calm { border-right-color: #0284c7; }
+
+        /* ---- Disabled (already selected) ---- */
         .child-selected .child-select-btn {
-          opacity: 0.45;
+          opacity: 0.4;
           cursor: not-allowed;
           pointer-events: none;
-          filter: grayscale(0.5);
         }
 
         /* followup buttons are now rendered as React components outside the bubble */

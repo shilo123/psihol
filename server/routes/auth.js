@@ -171,7 +171,7 @@ router.post('/google', async (req, res) => {
 // POST /register - Onboarding data
 router.post('/register', async (req, res) => {
   try {
-    let { parentName, parentAge, parentStyle, children, challenges, email } = req.body;
+    let { parentName, parentGender, parentAge, parentStyle, children, challenges, email } = req.body;
 
     const token = req.headers.authorization?.replace('Bearer ', '');
     const userId = token?.replace('mock-token-', '');
@@ -206,6 +206,7 @@ router.post('/register', async (req, res) => {
         name: parentName || '',
         picture: '',
         parentName: parentName || '',
+        parentGender: parentGender || '',
         parentAge: parentAge || '',
         parentBirthYear: parentBirthYear,
         parentStyle: parentStyle || '',
@@ -219,6 +220,7 @@ router.post('/register', async (req, res) => {
 
     const updates = {
       parentName: parentName || user.parentName,
+      parentGender: parentGender || user.parentGender || '',
       parentAge: parentAge || user.parentAge,
       parentBirthYear: parentBirthYear || user.parentBirthYear,
       parentStyle: parentStyle || user.parentStyle,

@@ -103,7 +103,7 @@ export function renderMarkdown(text) {
       const g = (gender || 'boy').trim()
       const personalityLabels = { sensitive: 'רגיש/ה', stubborn: 'עקשן/ית', anxious: 'חרדתי/ת', energetic: 'אנרגטי/ת', calm: 'רגוע/ה' }
       const pLabel = personalityLabels[p] || p
-      return `<button class="child-select-btn child-${p}-${g}" data-child="${name}"><span class="child-btn-name">${name}</span><span class="child-btn-personality">${pLabel}</span></button>`
+      return `<button class="child-select-btn child-accent-${p}" data-child="${name}"><span class="child-btn-name">${name}</span><span class="child-btn-personality">${pLabel}</span></button>`
     })
     .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-text-main">$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
@@ -115,10 +115,9 @@ export function renderMarkdown(text) {
     // Add/update child tags - cleaned from display, handled by React popup
     .replace(/\s*\[\[add_child:[^\]]+\]\]/g, '')
     .replace(/\s*\[\[update_child:[^\]]+\]\]/g, '')
-    // Common mistake & follow-up question tags - cleaned, rendered separately by React
+    // Common mistake, follow-up question & followup tags - cleaned from display, rendered as React components
     .replace(/\s*\[\[common_mistake:[^\]]+\]\]/g, '')
     .replace(/\s*\[\[follow_up_question:[^\]]+\]\]/g, '')
-    // Follow-up tags - cleaned from display, rendered as React component outside bubble
     .replace(/\s*\[\[followup:[^\]]+\]\]/g, '')
     .replace(/\n\n/g, '</p><p class="mt-3">')
     .replace(/\n/g, '<br>')

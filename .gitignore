@@ -43,6 +43,9 @@ __screenshots__/
 .env.local
 .env.production
 
+# MCP config (may contain secrets via env interpolation)
+.mcp.json
+
 # Netlify
 .netlify
 

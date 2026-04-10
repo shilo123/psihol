@@ -53,6 +53,14 @@ function buildSystemMessage(systemPrompt, technicalPrompt, user, memories = []) 
   let contextParts = [systemPrompt];
 
   if (user.parentName) contextParts.push(`\nשם ההורה: ${user.parentName}`);
+  if (user.parentGender) {
+    const genderLabel = user.parentGender === 'mom' ? 'אמא' : 'אבא';
+    const genderInstruction = user.parentGender === 'mom'
+      ? 'פני אליה בלשון נקבה: "את", "שלך", "נסי", "עשית" וכו\'. אל תשתמשי בלשון זכר כלפיה.'
+      : 'פני אליו בלשון זכר: "אתה", "שלך", "נסה", "עשית" וכו\'. אל תשתמשי בלשון נקבה כלפיו.';
+    contextParts.push(`ההורה הוא: ${genderLabel}`);
+    contextParts.push(`*** חשוב - מגדר ההורה ***\n${genderInstruction}`);
+  }
   // Dynamic parent age - calculate from birth year if available, otherwise use static
   if (user.parentBirthYear) {
     const dynamicAge = new Date().getFullYear() - user.parentBirthYear;
@@ -445,6 +453,8 @@ router.post('/conversations/:id/messages', async (req, res) => {
       'X-Accel-Buffering': 'no',
     });
     res.flushHeaders();
+    // Disable Nagle's algorithm for immediate chunk delivery
+    res.socket?.setNoDelay?.(true);
 
     res.write(`data: ${JSON.stringify({ type: 'user_message', message: userMessage })}\n\n`);
 
@@ -541,6 +551,7 @@ router.post('/temp', async (req, res) => {
       'X-Accel-Buffering': 'no',
     });
     res.flushHeaders();
+    res.socket?.setNoDelay?.(true);
 
     res.write(`data: ${JSON.stringify({ type: 'user_message', message: userMessage })}\n\n`);
 

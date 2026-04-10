@@ -19,6 +19,7 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(1)
   const [direction, setDirection] = useState('forward') // for animation direction
   const [parentName, setParentName] = useState(user?.parentName || user?.name || '')
+  const [parentGender, setParentGender] = useState('')
   const [parentAge, setParentAge] = useState('')
   const [parentStyle, setParentStyle] = useState('')
 
@@ -87,6 +88,7 @@ export default function OnboardingPage() {
   async function handleSubmit() {
     await completeOnboarding({
       parentName,
+      parentGender,
       parentAge,
       parentStyle,
       children: children.filter(c => c.name.trim()),
@@ -250,6 +252,30 @@ export default function OnboardingPage() {
                         שדה חובה
                       </p>
                     )}
+                  </div>
+
+                  {/* Parent Gender */}
+                  <div>
+                    <label className="block text-sm font-bold text-text-main mb-2">
+                      <span className="material-symbols-rounded text-primary text-base align-middle me-1">wc</span>
+                      אני...
+                    </label>
+                    <div className="flex gap-3">
+                      {[{ value: 'mom', label: 'אמא' }, { value: 'dad', label: 'אבא' }].map(g => (
+                        <button
+                          key={g.value}
+                          type="button"
+                          onClick={() => setParentGender(g.value)}
+                          className={`flex-1 h-14 rounded-2xl border-2 text-base font-semibold transition-all duration-200 ${
+                            parentGender === g.value
+                              ? 'border-primary bg-primary/10 text-primary'
+                              : 'border-gray-200 bg-white/70 text-text-main hover:border-gray-300'
+                          }`}
+                        >
+                          {g.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   {/* Age */}
