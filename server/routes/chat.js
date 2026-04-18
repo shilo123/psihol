@@ -17,7 +17,10 @@ import {
   getSetting,
   saveLowConfidenceQuestion,
   DEFAULT_TECHNICAL_PROMPT,
+  incrementBoundaryCount,
+  calculateProgramDay,
 } from '../db.js';
+import boundariesProgram from '../../shared/programs/boundaries.json' with { type: 'json' };
 
 const router = Router();
 
@@ -136,6 +139,57 @@ function buildSystemMessage(systemPrompt, technicalPrompt, user, memories = []) 
     .replace('{REGISTERED_CHILDREN_DETAILS}', registeredDetails);
   contextParts.push('\n' + resolvedTechnicalPrompt);
 
+  // Program context (intervention plan)
+  if (user.program && user.program.programId === 'boundaries') {
+    const { day: currentDay, completed } = calculateProgramDay(user.program.startedAt);
+    const rawDay = !completed ? boundariesProgram.days.find(d => d.day === currentDay) : null;
+    if (rawDay) {
+      const g = user.parentGender === 'dad' ? 'dad' : 'mom';
+      const title = rawDay[`title_${g}`] || rawDay.title_mom;
+      const instructions = rawDay[`instructions_${g}`] || rawDay.instructions_mom;
+      const selfSentences = rawDay[`practice_sentences_for_self_${g}`] || rawDay.practice_sentences_for_self_mom;
+      const commonMistake = rawDay[`common_mistake_${g}`] || rawDay.common_mistake;
+
+      contextParts.push(`\n*** תוכנית התערבות פעילה — הצבת גבולות ***`);
+      contextParts.push(`ההורה נמצא/ת ביום ${rawDay.day} מתוך 5 בתוכנית "הצבת גבולות".`);
+      contextParts.push(`נושא היום: ${title}`);
+      contextParts.push(`הנחיות היום: ${instructions.join(' | ')}`);
+      if (selfSentences) {
+        contextParts.push(`משפטים לתרגול עצמי: ${selfSentences.join(' | ')}`);
+      }
+      if (rawDay.sentences_to_child) {
+        contextParts.push(`משפטים לילד: ${rawDay.sentences_to_child.join(' | ')}`);
+      }
+      contextParts.push(`טעות נפוצה ביום הזה: ${commonMistake}`);
+      contextParts.push(`כשההורה שואל/ת שאלות שקשורות לגבולות, שלבי את תוכן התוכנית בתשובה בצורה טבעית. הזכירי באיזה יום הם בתוכנית ומה הנושא של היום.`);
+      contextParts.push(`אם השאלה לא קשורה לגבולות — ענו כרגיל בלי להזכיר את התוכנית.`);
+    }
+  }
+
+  // Boundary detection tag (for non-program users)
+  if (!user.program && !user.programDismissed) {
+    contextParts.push(`\n*** חובה — זיהוי שאלות שקשורות להצבת גבולות ***`);
+    contextParts.push(`היי רגישה מאוד לזיהוי הזה. אם השאלה של ההורה קשורה — ישירות או בעקיפין — לאחד מהנושאים הבאים, הוסיפי את התג [[boundary_related:true]] בסוף התשובה:`);
+    contextParts.push(`- הצבת גבולות, חוקים, כללים, סדר, שגרה, עקביות`);
+    contextParts.push(`- ילד שלא מקשיב, לא שומע, לא שומע בקול, מתעלם`);
+    contextParts.push(`- ילד שלא משתף פעולה, מסרב, אומר "לא", מתנגד`);
+    contextParts.push(`- התנהגות מאתגרת: צעקות, היסטריות, זריקת חפצים, דחיפות, חוצפות, מילים גסות`);
+    contextParts.push(`- ויכוחים, מריבות, עימותים עם הילד`);
+    contextParts.push(`- שעת שינה, זמן מסך, פלאפון, טאבלט, טלוויזיה — כשהילד לא מוכן להפסיק`);
+    contextParts.push(`- אכילה כשהילד מסרב, קימות בלילה כשקשורות לחוסר גבולות`);
+    contextParts.push(`- עונשים, תגמולים, תוצאות, "אם... אז..."`);
+    contextParts.push(`- הורה שמרגיש/ה חסר/ת אונים, לא יודע/ת איך להגיב, מאבד/ת שליטה`);
+    contextParts.push(`- ילד שתמיד רוצה עוד, לא מסתפק, דורשני`);
+    contextParts.push(`- ריבים בין אחים כשקשורים לחוסר כללים`);
+    contextParts.push(`דוגמאות לשאלות שחייבות להיות מזוהות:`);
+    contextParts.push(`"הילד שלי לא הולך לישון" → כן! [[boundary_related:true]]`);
+    contextParts.push(`"הילד צועק עליי כשאני אומרת לא" → כן! [[boundary_related:true]]`);
+    contextParts.push(`"מה עושים כשהילד לא מוכן לעזוב את הפלאפון" → כן! [[boundary_related:true]]`);
+    contextParts.push(`"הבן שלי מרביץ לאחות" → כן! [[boundary_related:true]]`);
+    contextParts.push(`"איך גורמים לילד לשמוע" → כן! [[boundary_related:true]]`);
+    contextParts.push(`אם בספק — עדיף לסמן כן. רק שאלות שבאמת לא קשורות (למשל התפתחות, חיתולים, אוכל בריא) — אל תסמני.`);
+  }
+
   // Multi-child selection instructions (dynamic, depends on user's children)
   if (user.children && user.children.length > 1) {
     const childButtons = user.children.map(c => `[[child:${c.name}:${c.personality || 'calm'}:${c.gender || 'boy'}]]`).join(' ');
@@ -162,7 +216,7 @@ function calculateAge(birthDate) {
 }
 
 // Summarize old messages when history is too long
-async function summarizeHistory(messages) {
+async function summarizeHistory(messages, userId = null) {
   if (!getOpenAIKey() || messages.length <= MAX_MESSAGES_BEFORE_SUMMARY) {
     return null;
   }
@@ -200,6 +254,7 @@ async function summarizeHistory(messages) {
         inputTokens: usage.prompt_tokens || 0,
         outputTokens: usage.completion_tokens || 0,
         model: 'gpt-4.1-mini',
+        userId,
       }).catch(() => {});
     }
     return data.choices[0].message.content;
@@ -210,7 +265,7 @@ async function summarizeHistory(messages) {
 }
 
 // Build the messages array for OpenAI, with optional summarization
-async function buildOpenAIMessages(systemMessage, allMessages) {
+async function buildOpenAIMessages(systemMessage, allMessages, userId = null) {
   if (allMessages.length <= MAX_MESSAGES_BEFORE_SUMMARY) {
     return [
       { role: 'system', content: systemMessage },
@@ -219,7 +274,7 @@ async function buildOpenAIMessages(systemMessage, allMessages) {
   }
 
   // Try to summarize old messages
-  const summary = await summarizeHistory(allMessages);
+  const summary = await summarizeHistory(allMessages, userId);
   const recentMessages = allMessages.slice(-10);
 
   if (summary) {
@@ -243,7 +298,7 @@ function estimateTokens(text) {
 }
 
 // Stream OpenAI response
-async function streamOpenAI(res, messages) {
+async function streamOpenAI(res, messages, userId = null) {
   let fullContent = '';
 
   if (getOpenAIKey()) {
@@ -303,7 +358,7 @@ async function streamOpenAI(res, messages) {
       // Track token usage (non-blocking, ignore DB errors)
       const inputTokens = usage?.prompt_tokens || estimateTokens(messages.map(m => m.content).join(''));
       const outputTokens = usage?.completion_tokens || estimateTokens(fullContent);
-      trackTokenUsage({ inputTokens, outputTokens, model: 'gpt-4.1' }).catch(() => {});
+      trackTokenUsage({ inputTokens, outputTokens, model: 'gpt-4.1', userId }).catch(() => {});
 
     } catch (error) {
       console.error('OpenAI stream failed:', error);
@@ -460,18 +515,29 @@ router.post('/conversations/:id/messages', async (req, res) => {
 
     // Build messages with auto-summarization for long histories
     const allMessages = [...conversation.messages, userMessage];
-    const messages = await buildOpenAIMessages(systemMessage, allMessages);
+    const messages = await buildOpenAIMessages(systemMessage, allMessages, user.id);
 
     // Detect active child from conversation history
     const activeChild = detectActiveChild(allMessages, user.children);
 
-    let fullContent = await streamOpenAI(res, messages);
+    let fullContent = await streamOpenAI(res, messages, user.id);
 
     // Extract confidence score before cleaning tags
     const confidenceScore = extractConfidence(fullContent);
 
     // Extract and save memories from AI response
     fullContent = await extractAndSaveMemories(user.id, fullContent);
+
+    // Extract boundary_related tag and track count
+    let boundaryCount = user.boundaryQuestionCount || 0;
+    const boundaryMatch = fullContent.match(/\[\[boundary_related:true\]\]/);
+    // Fallback: keyword detection on user's question if AI didn't tag it
+    const boundaryKeywords = /גבול|משמעת|כלל|עקביות|לא מקשיב|לא שומע|סירוב|מסרב|לא רוצה|ויכוח|צעקות|צועק|עונש|חוק|שגרה|לא שומעת? בקול|מתנגד|מתנגדת|לא מוכן|לא מפסיק|היסטרי|זורק|זורקת|דוחף|דוחפת|מרביץ|חוצפ|מילים גסות|לא הולך לישון|לישון בזמן|פלאפון|מסך|טאבלט|לא מפסיק לשחק|לא עוזב|לא עושה שיעורים|לא מסדר|לא מנקה|חסר אונים|חסרת אונים|מאבד שליטה|מאבדת שליטה|לא יודע מה לעשות|לא יודעת מה לעשות|איך גורמים|איך לגרום|למה הוא לא|למה היא לא|תמיד רוצה עוד|דורשני|מפנק|לא מסתפק|קשה לי עם/;
+    const isBoundaryQuestion = boundaryMatch || (!user.program && !user.programDismissed && boundaryKeywords.test(content));
+    if (isBoundaryQuestion) {
+      fullContent = fullContent.replace(/\s*\[\[boundary_related:true\]\]/g, '');
+      boundaryCount = await incrementBoundaryCount(user.id);
+    }
 
     // Save low-confidence questions (score < 6)
     if (confidenceScore !== null && confidenceScore < 6) {
@@ -503,7 +569,7 @@ router.post('/conversations/:id/messages', async (req, res) => {
       assistantMessage,
     });
 
-    res.write(`data: ${JSON.stringify({ type: 'done', message: assistantMessage })}\n\n`);
+    res.write(`data: ${JSON.stringify({ type: 'done', message: assistantMessage, boundaryCount })}\n\n`);
     res.end();
   } catch (error) {
     console.error('Send message error:', error);
@@ -558,9 +624,21 @@ router.post('/temp', async (req, res) => {
     // Build messages from client-side history (with summarization)
     const prevMessages = (history || []).map(m => ({ role: m.role, content: m.content }));
     const allMessages = [...prevMessages, { role: 'user', content }];
-    const messages = await buildOpenAIMessages(systemMessage, allMessages);
+    const messages = await buildOpenAIMessages(systemMessage, allMessages, user?.id);
 
-    const fullContent = await streamOpenAI(res, messages);
+    let fullContent = await streamOpenAI(res, messages, user?.id);
+
+    // Extract boundary_related tag for temp chat too
+    let boundaryCount = user?.boundaryQuestionCount || 0;
+    const boundaryMatch = fullContent.match(/\[\[boundary_related:true\]\]/);
+    const boundaryKeywords = /גבול|משמעת|כלל|עקביות|לא מקשיב|לא שומע|סירוב|מסרב|לא רוצה|ויכוח|צעקות|צועק|עונש|חוק|שגרה|לא שומעת? בקול|מתנגד|מתנגדת|לא מוכן|לא מפסיק/;
+    const isBoundaryQuestion = boundaryMatch || (user && !user.program && !user.programDismissed && boundaryKeywords.test(content));
+    if (isBoundaryQuestion && user) {
+      fullContent = fullContent.replace(/\s*\[\[boundary_related:true\]\]/g, '');
+      boundaryCount = await incrementBoundaryCount(user.id);
+    } else if (boundaryMatch) {
+      fullContent = fullContent.replace(/\s*\[\[boundary_related:true\]\]/g, '');
+    }
 
     const assistantMessage = {
       id: uuidv4(),
@@ -569,7 +647,7 @@ router.post('/temp', async (req, res) => {
       timestamp: new Date().toISOString(),
     };
 
-    res.write(`data: ${JSON.stringify({ type: 'done', message: assistantMessage })}\n\n`);
+    res.write(`data: ${JSON.stringify({ type: 'done', message: assistantMessage, boundaryCount })}\n\n`);
     res.end();
   } catch (error) {
     console.error('Temp chat error:', error);

@@ -115,6 +115,14 @@ export const api = {
   updateChild: (id, data) => apiRequest(`/api/user/children/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteAccount: () => apiRequest('/api/user/account', { method: 'DELETE' }),
 
+  // Program
+  getProgramStatus: () => apiRequest('/api/user/program/status'),
+  startProgram: (programId) => apiRequest('/api/user/program/start', { method: 'POST', body: JSON.stringify({ programId }) }),
+  dismissProgram: () => apiRequest('/api/user/program/dismiss', { method: 'POST' }),
+  quitProgram: () => apiRequest('/api/user/program/quit', { method: 'POST' }),
+  toggleProgramNotifications: () => apiRequest('/api/user/program/toggle-notifications', { method: 'POST' }),
+  saveFcmToken: (token) => apiRequest('/api/user/fcm-token', { method: 'POST', body: JSON.stringify({ token }) }),
+
   // Admin
   getSystemPrompt: () => apiRequest('/api/admin/system-prompt'),
   updateSystemPrompt: (prompt) => apiRequest('/api/admin/system-prompt', { method: 'PUT', body: JSON.stringify({ prompt }) }),
@@ -129,4 +137,5 @@ export const api = {
   getStats: () => apiRequest('/api/admin/stats'),
   getLowConfidenceQuestions: () => apiRequest('/api/admin/low-confidence'),
   deleteLowConfidenceQuestion: (id) => apiRequest(`/api/admin/low-confidence/${id}`, { method: 'DELETE' }),
+  sendPushToUser: (userId, title, body) => apiRequest(`/api/admin/send-push/${userId}`, { method: 'POST', body: JSON.stringify({ title, body }) }),
 }

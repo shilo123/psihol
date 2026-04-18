@@ -36,6 +36,349 @@ function groupConversationsByDate(conversations) {
 
 
 /* ================================================================== */
+/*  ProgramSuggestionPopup — suggests joining the boundaries program  */
+/* ================================================================== */
+function ProgramSuggestionPopup({ onStart, onDismiss }) {
+  const [visible, setVisible] = useState(false)
+  const [starting, setStarting] = useState(false)
+
+  useEffect(() => {
+    requestAnimationFrame(() => setVisible(true))
+  }, [])
+
+  function handleDismiss() {
+    setVisible(false)
+    setTimeout(onDismiss, 300)
+  }
+
+  async function handleStart() {
+    setStarting(true)
+    try {
+      await onStart()
+      setVisible(false)
+    } catch {
+      setStarting(false)
+    }
+  }
+
+  const days = [
+    { num: 1, title: 'תבחרי גבול אחד', icon: 'target' },
+    { num: 2, title: 'תחליטו ביחד', icon: 'handshake' },
+    { num: 3, title: 'הטרמה', icon: 'notifications_active' },
+    { num: 4, title: 'אכיפה ברוגע', icon: 'shield_person' },
+    { num: 5, title: 'סיבה ותוצאה', icon: 'conversion_path' },
+  ]
+
+  return (
+    <div className={`fixed inset-0 z-[250] transition-all duration-300 ${visible ? 'bg-black/50 backdrop-blur-sm' : 'bg-transparent pointer-events-none'}`} onClick={handleDismiss}>
+      {/* Desktop Modal */}
+      <div className="hidden md:flex items-center justify-center h-full p-4">
+        <div
+          className={`relative bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden transition-all duration-500 ${
+            visible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-8'
+          }`}
+          onClick={e => e.stopPropagation()}
+        >
+          {/* Gradient header */}
+          <div className="h-2 bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500" />
+          <div className="p-8">
+            {/* Hero */}
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center justify-center size-16 rounded-2xl bg-gradient-to-br from-emerald-100 to-teal-100 mb-4">
+                <span className="material-symbols-rounded text-emerald-600 text-4xl">shield_person</span>
+              </div>
+              <h2 className="text-2xl font-extrabold text-gray-900 mb-2">תוכנית הצבת גבולות</h2>
+              <p className="text-sm text-gray-500 leading-relaxed max-w-sm mx-auto">5 ימים של כלים מעשיים שיעזרו לך להציב גבולות ברורים — בלי צעקות, בלי ויכוחים</p>
+            </div>
+
+            {/* 5 days preview */}
+            <div className="space-y-2 mb-6">
+              {days.map(d => (
+                <div key={d.num} className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-100">
+                  <div className="size-8 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
+                    <span className="text-xs font-extrabold text-emerald-700">{d.num}</span>
+                  </div>
+                  <span className="text-sm font-semibold text-gray-700">{d.title}</span>
+                  <span className="material-symbols-rounded text-gray-300 text-lg mr-auto">{d.icon}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button
+                onClick={handleDismiss}
+                className="flex-1 h-13 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors text-sm"
+              >
+                לא עכשיו
+              </button>
+              <button
+                onClick={handleStart}
+                disabled={starting}
+                className="flex-[1.5] h-13 rounded-xl font-bold text-white bg-gradient-to-l from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:brightness-110 transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
+              >
+                {starting ? (
+                  <span className="material-symbols-rounded animate-spin text-lg">progress_activity</span>
+                ) : (
+                  <span className="material-symbols-rounded text-lg">rocket_launch</span>
+                )}
+                {starting ? 'מתחילים...' : 'בואו נתחיל!'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Bottom Sheet */}
+      <div className="md:hidden flex flex-col justify-end h-full" onClick={handleDismiss}>
+        <div
+          className={`bg-white rounded-t-3xl shadow-2xl overflow-hidden transition-transform duration-400 ease-out ${
+            visible ? 'translate-y-0' : 'translate-y-full'
+          }`}
+          style={{ maxHeight: '92vh' }}
+          onClick={e => e.stopPropagation()}
+        >
+          {/* Drag handle */}
+          <div className="flex justify-center pt-3 pb-1">
+            <div className="w-10 h-1.5 bg-gray-300 rounded-full" />
+          </div>
+          <div className="h-1.5 bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500 mx-6 rounded-full" />
+
+          <div className="p-6 pb-8 overflow-y-auto" style={{ maxHeight: 'calc(92vh - 40px)' }}>
+            {/* Hero */}
+            <div className="text-center mb-5">
+              <div className="inline-flex items-center justify-center size-14 rounded-2xl bg-gradient-to-br from-emerald-100 to-teal-100 mb-3">
+                <span className="material-symbols-rounded text-emerald-600 text-3xl">shield_person</span>
+              </div>
+              <h2 className="text-xl font-extrabold text-gray-900 mb-1.5">תוכנית הצבת גבולות</h2>
+              <p className="text-xs text-gray-500 leading-relaxed max-w-xs mx-auto">5 ימים של כלים מעשיים — בלי צעקות, בלי ויכוחים</p>
+            </div>
+
+            {/* Days */}
+            <div className="space-y-2 mb-5">
+              {days.map(d => (
+                <div key={d.num} className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-gray-50 border border-gray-100">
+                  <div className="size-7 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
+                    <span className="text-xs font-extrabold text-emerald-700">{d.num}</span>
+                  </div>
+                  <span className="text-[13px] font-semibold text-gray-700">{d.title}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button onClick={handleDismiss} className="flex-1 h-12 rounded-xl font-bold text-gray-600 bg-gray-100 text-sm">
+                לא עכשיו
+              </button>
+              <button
+                onClick={handleStart}
+                disabled={starting}
+                className="flex-[1.5] h-12 rounded-xl font-bold text-white bg-gradient-to-l from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/25 disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
+              >
+                {starting ? (
+                  <span className="material-symbols-rounded animate-spin text-lg">progress_activity</span>
+                ) : (
+                  <span className="material-symbols-rounded text-lg">rocket_launch</span>
+                )}
+                {starting ? 'מתחילים...' : 'בואו נתחיל!'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ================================================================== */
+/*  ProgramDayTab — sticky tab showing current day in program          */
+/* ================================================================== */
+function ProgramDayTab({ programStatus, minimized, onMinimize, onRestore, onAskQuestion, onQuitProgram, onToggleNotifications, notificationsEnabled }) {
+  const [expanded, setExpanded] = useState(false)
+  const [showQuitConfirm, setShowQuitConfirm] = useState(false)
+
+  if (!programStatus?.active || !programStatus.dayContent) return null
+
+  const { currentDay, dayContent, programTitle } = programStatus
+
+  // Minimized = don't render the big card (the mini button is in the topbar)
+  if (minimized) return null
+
+  return (
+    <div className="max-w-3xl mx-auto mb-3 anim-fade-in-up">
+      <div className="relative bg-white dark:bg-surface-dark rounded-2xl border border-emerald-200 dark:border-emerald-800 shadow-sm overflow-hidden">
+        {/* Close (minimize) button */}
+        <button
+          onClick={(e) => { e.stopPropagation(); onMinimize() }}
+          className="absolute top-2.5 left-2.5 z-10 size-7 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center transition-colors"
+        >
+          <span className="material-symbols-rounded text-gray-400 text-[16px]">close</span>
+        </button>
+
+        {/* Header — compact, clickable to expand */}
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="w-full flex items-center gap-2.5 px-3 py-2 text-right hover:bg-emerald-50/50 dark:hover:bg-emerald-900/10 transition-colors"
+        >
+          {/* Day badge */}
+          <div className="shrink-0 size-8 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center">
+            <span className="text-white text-xs font-extrabold">{currentDay}/5</span>
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <p className="text-[12px] sm:text-[13px] font-semibold text-text-main dark:text-gray-200 truncate">
+              <span className="text-emerald-600 dark:text-emerald-400">יום {currentDay}</span>
+              <span className="text-gray-300 mx-1">·</span>
+              {dayContent.title}
+            </p>
+          </div>
+
+          {/* Progress dots */}
+          <div className="shrink-0 flex gap-1 items-center">
+            {[1,2,3,4,5].map(d => (
+              <div key={d} className={`size-1.5 rounded-full ${
+                d < currentDay ? 'bg-emerald-400' : d === currentDay ? 'bg-emerald-500 ring-1 ring-emerald-200' : 'bg-gray-200 dark:bg-gray-600'
+              }`} />
+            ))}
+          </div>
+
+          <span className={`material-symbols-rounded text-gray-400 text-base shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`}>
+            expand_more
+          </span>
+        </button>
+
+        {/* Expanded content */}
+        {expanded && (
+          <div className="px-4 pb-4 border-t border-emerald-100 dark:border-emerald-800/50 anim-fade-in-up">
+            {/* Instructions */}
+            <div className="mt-3">
+              <h4 className="text-xs font-bold text-emerald-700 dark:text-emerald-400 mb-2 flex items-center gap-1.5">
+                <span className="material-symbols-rounded text-sm">checklist</span>
+                מה עושים היום
+              </h4>
+              <ul className="space-y-1.5">
+                {dayContent.instructions.map((inst, i) => (
+                  <li key={i} className="flex items-start gap-2 text-[13px] text-gray-700 dark:text-gray-300 leading-relaxed">
+                    <span className="text-emerald-400 mt-1 text-[8px]">●</span>
+                    <span>{inst}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Sentences for self / child */}
+            {dayContent.practice_sentences_for_self && (
+              <div className="mt-4">
+                <h4 className="text-xs font-bold text-purple-600 dark:text-purple-400 mb-2 flex items-center gap-1.5">
+                  <span className="material-symbols-rounded text-sm">self_improvement</span>
+                  משפטים לתרגול עצמי
+                </h4>
+                <div className="space-y-1.5 bg-purple-50/60 dark:bg-purple-900/10 rounded-xl p-3 border border-purple-100 dark:border-purple-800/30">
+                  {dayContent.practice_sentences_for_self.map((s, i) => (
+                    <p key={i} className="text-[13px] text-purple-800 dark:text-purple-300 leading-relaxed flex items-start gap-2">
+                      <span className="text-purple-300 shrink-0">"</span>
+                      <span>{s}</span>
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {dayContent.sentences_to_child && (
+              <div className="mt-4">
+                <h4 className="text-xs font-bold text-blue-600 dark:text-blue-400 mb-2 flex items-center gap-1.5">
+                  <span className="material-symbols-rounded text-sm">chat_bubble</span>
+                  משפטים לילד
+                </h4>
+                <div className="space-y-1.5 bg-blue-50/60 dark:bg-blue-900/10 rounded-xl p-3 border border-blue-100 dark:border-blue-800/30">
+                  {dayContent.sentences_to_child.map((s, i) => (
+                    <p key={i} className="text-[13px] text-blue-800 dark:text-blue-300 leading-relaxed flex items-start gap-2">
+                      <span className="text-blue-300 shrink-0">"</span>
+                      <span>{s}</span>
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Common mistake */}
+            {dayContent.common_mistake && (
+              <div className="mt-4 flex items-start gap-2.5 px-3 py-2.5 rounded-xl bg-amber-50/80 dark:bg-amber-900/10 border border-amber-200/60 dark:border-amber-800/30">
+                <span className="material-symbols-rounded text-amber-500 text-lg shrink-0 mt-0.5">warning</span>
+                <div>
+                  <span className="text-[11px] font-bold text-amber-700 dark:text-amber-400">טעות נפוצה</span>
+                  <p className="text-[13px] text-amber-800 dark:text-amber-300 leading-relaxed mt-0.5">{dayContent.common_mistake}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Ask question button */}
+            <button
+              onClick={() => { setExpanded(false); onAskQuestion?.() }}
+              className="mt-4 w-full h-11 rounded-xl font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-all flex items-center justify-center gap-2 text-sm"
+            >
+              <span className="material-symbols-rounded text-lg">chat</span>
+              רוצה לשאול על הנושא של היום
+            </button>
+
+            {/* Bottom controls: notifications toggle + quit */}
+            <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
+              {/* Notifications toggle */}
+              <button
+                onClick={() => onToggleNotifications?.()}
+                className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+              >
+                <div className={`relative w-9 h-5 rounded-full transition-colors ${notificationsEnabled ? 'bg-emerald-400' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                  <div className={`absolute top-0.5 size-4 rounded-full bg-white shadow transition-all ${notificationsEnabled ? 'right-0.5' : 'left-0.5'}`} />
+                </div>
+                <span>התראות יומיות</span>
+              </button>
+
+              {/* Quit program */}
+              <button
+                onClick={() => setShowQuitConfirm(true)}
+                className="flex items-center gap-1 text-xs text-red-400 hover:text-red-600 dark:hover:text-red-300 transition-colors"
+              >
+                <span className="material-symbols-rounded text-sm">logout</span>
+                יציאה מהתוכנית
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Quit confirmation popup */}
+        {showQuitConfirm && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center p-4 bg-black/30 rounded-2xl" onClick={() => setShowQuitConfirm(false)}>
+            <div className="bg-white dark:bg-surface-dark rounded-2xl shadow-xl p-5 w-full max-w-xs anim-scale-in text-center" onClick={e => e.stopPropagation()}>
+              <div className="size-12 rounded-2xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center mx-auto mb-3">
+                <span className="material-symbols-rounded text-red-500 text-2xl">warning</span>
+              </div>
+              <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-1">לצאת מהתוכנית?</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">ההתקדמות שלך תימחק ותוכל/י להצטרף מחדש בכל עת.</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowQuitConfirm(false)}
+                  className="flex-1 h-10 rounded-xl font-bold text-gray-600 bg-gray-100 dark:bg-gray-800 dark:text-gray-300 text-sm"
+                >
+                  ביטול
+                </button>
+                <button
+                  onClick={() => { setShowQuitConfirm(false); onQuitProgram?.() }}
+                  className="flex-1 h-10 rounded-xl font-bold text-white bg-red-500 hover:bg-red-600 text-sm transition-colors"
+                >
+                  כן, יציאה
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/* ================================================================== */
 /*  AddChildSheet - Bottom sheet (mobile) / Modal (desktop)            */
 /* ================================================================== */
 function AddChildSheet({ data, onSubmit, onClose }) {
@@ -440,8 +783,13 @@ export default function ChatPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [copiedId, setCopiedId] = useState(null)
   const [likedIds, setLikedIds] = useState(new Set())
-  const [planBannerDismissed, setPlanBannerDismissed] = useState(false)
-  const [planBannerClicked, setPlanBannerClicked] = useState(false)
+  // Program state
+  const [programStatus, setProgramStatus] = useState(null) // { active, currentDay, dayContent, ... }
+  const [showProgramPopup, setShowProgramPopup] = useState(false)
+  const [programMinimized, setProgramMinimized] = useState(() => {
+    try { return localStorage.getItem(`programMinimized_${user?.id}`) === 'true' } catch { return false }
+  })
+  const boundaryCount = useChatStore((s) => s.boundaryCount)
 
   /* ---- Refs ---- */
   const scrollRef = useRef(null)
@@ -533,8 +881,76 @@ export default function ChatPage() {
     }
   }, [isLoggedIn, user, loadConversations, startTempChat])
 
-  // On landing, always start with a fresh new conversation view (no auto-select)
-  // The user sees the welcome screen and can start typing or pick an old chat from sidebar
+  // Load program status on login
+  useEffect(() => {
+    if (isLoggedIn && user && !user.isOffline && !isGuest) {
+      api.getProgramStatus().then(status => {
+        setProgramStatus(status)
+        if (status.boundaryQuestionCount !== undefined) {
+          useChatStore.setState({ boundaryCount: status.boundaryQuestionCount })
+        }
+      }).catch(() => {})
+    }
+  }, [isLoggedIn, user, isGuest])
+
+  // Show program suggestion popup when boundary count reaches 2
+  useEffect(() => {
+    if (boundaryCount >= 2 && programStatus && !programStatus.active && !programStatus.dismissed && !showProgramPopup && !isGuest) {
+      setShowProgramPopup(true)
+    }
+  }, [boundaryCount, programStatus, isGuest])
+
+  // Program handlers
+  async function handleStartProgram() {
+    const result = await api.startProgram('boundaries')
+    let notificationsEnabled = false
+
+    // Request push notification permission right away
+    try {
+      const { requestNotificationPermission } = await import('../../shared/firebase.js')
+      const fcmToken = await requestNotificationPermission()
+      if (fcmToken) {
+        await api.saveFcmToken(fcmToken)
+        await api.toggleProgramNotifications() // enable notifications
+        notificationsEnabled = true
+      }
+    } catch (e) {
+      console.warn('FCM setup skipped:', e)
+    }
+
+    setProgramStatus({
+      active: true,
+      currentDay: 1,
+      dayContent: result.dayContent,
+      programTitle: result.programTitle,
+      notificationsEnabled,
+    })
+    setShowProgramPopup(false)
+  }
+
+  async function handleDismissProgram() {
+    await api.dismissProgram()
+    setProgramStatus(prev => ({ ...prev, dismissed: true }))
+    setShowProgramPopup(false)
+  }
+
+  async function handleQuitProgram() {
+    await api.quitProgram()
+    setProgramStatus({ active: false, dismissed: false })
+  }
+
+  async function handleToggleNotifications() {
+    const result = await api.toggleProgramNotifications()
+    if (result.notificationsEnabled) {
+      // If enabling, request permission and save FCM token
+      const { requestNotificationPermission } = await import('../../shared/firebase.js')
+      const token = await requestNotificationPermission()
+      if (token) {
+        await api.saveFcmToken(token)
+      }
+    }
+    setProgramStatus(prev => prev ? { ...prev, notificationsEnabled: result.notificationsEnabled } : prev)
+  }
 
   // Navigate to onboarding after login if not onboarded (skip for guests)
   useEffect(() => {
@@ -543,12 +959,12 @@ export default function ChatPage() {
     }
   }, [isLoggedIn, isGuest, user, isOnboarded, navigate])
 
-  // Auto-scroll on new messages
+  // Auto-scroll only when a new message is added (not on content updates during typing)
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
-  }, [messages, sending])
+  }, [messages.length])
 
   // Scroll position detection for "scroll to bottom" button
   useEffect(() => {
@@ -1097,6 +1513,20 @@ export default function ChatPage() {
                 הירשמו לשמירת השיחות
               </button>
             )}
+            {/* Program mini button (when minimized) */}
+            {programStatus?.active && programMinimized && (
+              <button
+                onClick={() => { setProgramMinimized(false); try { localStorage.setItem(`programMinimized_${user?.id}`, 'false') } catch {} }}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-50 border border-emerald-200/60 text-emerald-700 rounded-full text-xs font-bold hover:bg-emerald-100 transition-all"
+                title="פתח תוכנית הצבת גבולות"
+              >
+                <div className="size-5 rounded-md bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center">
+                  <span className="text-white text-[9px] font-extrabold">{programStatus.currentDay}</span>
+                </div>
+                <span className="hidden sm:inline">יום {programStatus.currentDay}/5</span>
+                <span className="material-symbols-rounded text-emerald-400 text-sm">shield_person</span>
+              </button>
+            )}
             {/* Temp chat toggle button */}
             {!isGuest && (
               <button
@@ -1292,23 +1722,6 @@ export default function ChatPage() {
                           </div>
                         )}
 
-                        {/* Common mistake — outside the bubble */}
-                        {!isUser && (() => {
-                          const mistake = extractCommonMistake(msg.content)
-                          if (!mistake) return null
-                          return (
-                            <div className="mt-3 pr-1">
-                              <div className="flex items-start gap-2.5 px-3.5 py-2.5 rounded-lg bg-amber-50/80 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-800/30">
-                                <span className="material-symbols-rounded text-amber-500 dark:text-amber-400 text-[16px] mt-0.5 shrink-0">lightbulb</span>
-                                <div className="min-w-0">
-                                  <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 leading-none">טעות נפוצה</span>
-                                  <p className="text-[12.5px] text-amber-900/80 dark:text-amber-200/70 leading-relaxed mt-0.5">{mistake}</p>
-                                </div>
-                              </div>
-                            </div>
-                          )
-                        })()}
-
                         {/* Follow-up questions — outside the bubble */}
                         {!isUser && (() => {
                           const followups = extractFollowups(msg.content)
@@ -1342,8 +1755,8 @@ export default function ChatPage() {
                   )
                 })}
 
-                {/* Streaming AI response — empathetic thinking state */}
-                {sending && (
+                {/* Waiting dots — only when sending but no content yet */}
+                {sending && !messages.some(m => m._streaming && m.content) && (
                   <div className="flex items-start gap-3 msg-entrance">
                     <div className="shrink-0 size-9 rounded-2xl bg-gradient-to-br from-primary via-purple-500 to-pink-400 hidden sm:flex items-center justify-center shadow-lg shadow-primary/20 mt-1 avatar-breathing">
                       <span className="material-symbols-outlined text-white text-base" style={{ fontVariationSettings: "'FILL' 1" }}>psychology</span>
@@ -1352,21 +1765,14 @@ export default function ChatPage() {
                       <div className="relative bg-white dark:bg-surface-dark rounded-2xl rounded-tr-md shadow-md shadow-gray-200/60 dark:shadow-none overflow-hidden ai-card-enter border border-gray-100 dark:border-gray-700/50">
                         <div className="h-[3px] bg-gradient-to-r from-primary/30 via-purple-400/30 to-pink-300/30" />
                         <div className="p-5 md:p-6">
-                          {streamingContent ? (
-                            <div
-                              className="text-[14px] text-text-main dark:text-gray-200 leading-[1.8] prose-sm streaming-cursor"
-                              dangerouslySetInnerHTML={{ __html: renderMarkdown(streamingContent) }}
-                            />
-                          ) : (
-                            <div className="flex items-center gap-3">
-                              <div className="flex items-center gap-1.5">
-                                <span className="typing-dot size-2 bg-primary/60 rounded-full" style={{ animationDelay: '0ms' }} />
-                                <span className="typing-dot size-2 bg-primary/60 rounded-full" style={{ animationDelay: '150ms' }} />
-                                <span className="typing-dot size-2 bg-primary/60 rounded-full" style={{ animationDelay: '300ms' }} />
-                              </div>
-                              <span className="text-xs text-text-muted thinking-text">חושבת על זה...</span>
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-1.5">
+                              <span className="typing-dot size-2 bg-primary/60 rounded-full" style={{ animationDelay: '0ms' }} />
+                              <span className="typing-dot size-2 bg-primary/60 rounded-full" style={{ animationDelay: '150ms' }} />
+                              <span className="typing-dot size-2 bg-primary/60 rounded-full" style={{ animationDelay: '300ms' }} />
                             </div>
-                          )}
+                            <span className="text-xs text-text-muted thinking-text">חושבת על זה...</span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1413,42 +1819,20 @@ export default function ChatPage() {
                 )
               })()}
 
-              {/* ── Boundary plan banner ── */}
-              {!planBannerDismissed && !sending && messages.filter(m => m.role === 'user').length >= 2 && (
-                <div className="max-w-3xl mx-auto mb-3 anim-fade-in-up">
-                  {!planBannerClicked ? (
-                    <div className="relative flex items-center gap-3 sm:gap-4 px-4 py-3 sm:py-3.5 bg-white dark:bg-surface-dark rounded-2xl border border-primary/20 dark:border-primary/30 shadow-sm">
-                      <button onClick={() => setPlanBannerDismissed(true)} className="absolute top-2 left-2 p-0.5 text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400 transition-colors">
-                        <span className="material-symbols-rounded text-[16px]">close</span>
-                      </button>
-                      <div className="shrink-0 size-10 sm:size-11 rounded-xl bg-primary/10 flex items-center justify-center">
-                        <span className="material-symbols-rounded text-primary text-xl sm:text-2xl">shield_person</span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] sm:text-sm font-semibold text-text-main dark:text-gray-200 leading-snug">יש לנו תוכנית להצבת גבולות — מותאמת אישית למשפחה שלך</p>
-                        <p className="text-[11px] sm:text-xs text-text-muted dark:text-gray-400 mt-0.5 hidden sm:block">כלים מעשיים שעוזרים ליצור שגרה ברורה ובטוחה לילדים</p>
-                      </div>
-                      <button
-                        onClick={() => setPlanBannerClicked(true)}
-                        className="shrink-0 px-4 py-2 sm:py-2.5 bg-primary hover:bg-primary-dark text-white text-[12px] sm:text-[13px] font-semibold rounded-xl transition-colors"
-                      >
-                        לפרטים
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="relative flex flex-col items-center text-center px-5 py-5 bg-white dark:bg-surface-dark rounded-2xl border border-primary/20 dark:border-primary/30 shadow-sm">
-                      <button onClick={() => setPlanBannerDismissed(true)} className="absolute top-2 left-2 p-0.5 text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400 transition-colors">
-                        <span className="material-symbols-rounded text-[16px]">close</span>
-                      </button>
-                      <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-3">
-                        <span className="material-symbols-rounded text-primary text-2xl">construction</span>
-                      </div>
-                      <p className="text-sm font-bold text-text-main dark:text-gray-200">התוכנית בהכנה!</p>
-                      <p className="text-xs text-text-muted dark:text-gray-400 mt-1 max-w-xs">אנחנו עובדים על תוכנית מותאמת אישית להצבת גבולות. בקרוב תקבלו הודעה כשהיא מוכנה.</p>
-                    </div>
-                  )}
-                </div>
+              {/* ── Program day tab (sticky) ── */}
+              {programStatus?.active && !sending && (
+                <ProgramDayTab
+                  programStatus={programStatus}
+                  minimized={programMinimized}
+                  onMinimize={() => { setProgramMinimized(true); try { localStorage.setItem(`programMinimized_${user?.id}`, 'true') } catch {} }}
+                  onRestore={() => { setProgramMinimized(false); try { localStorage.setItem(`programMinimized_${user?.id}`, 'false') } catch {} }}
+                  onAskQuestion={() => textareaRef.current?.focus()}
+                  onQuitProgram={handleQuitProgram}
+                  onToggleNotifications={handleToggleNotifications}
+                  notificationsEnabled={!!programStatus?.notificationsEnabled}
+                />
               )}
+
               <form
                 onSubmit={handleSend}
                 className="max-w-3xl mx-auto relative bg-white dark:bg-surface-dark rounded-2xl border border-gray-200 dark:border-gray-700 shadow-lg shadow-gray-200/50 dark:shadow-none focus-within:border-primary/40 focus-within:shadow-xl focus-within:shadow-primary/8 transition-all duration-300"
@@ -1824,6 +2208,14 @@ export default function ChatPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ---- Program Suggestion Popup ---- */}
+      {showProgramPopup && (
+        <ProgramSuggestionPopup
+          onStart={handleStartProgram}
+          onDismiss={handleDismissProgram}
+        />
       )}
 
       {/* ---- Inline styles for typing animation ---- */}

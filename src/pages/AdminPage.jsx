@@ -19,6 +19,10 @@ function UserDetailPopup({ userId, onClose, onDelete, onSave }) {
   const [editEmail, setEditEmail] = useState('')
   const [saving, setSaving] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [pushTitle, setPushTitle] = useState('')
+  const [pushBody, setPushBody] = useState('')
+  const [pushSending, setPushSending] = useState(false)
+  const [pushResult, setPushResult] = useState(null)
 
   useEffect(() => {
     api.getUserDetails(userId).then(data => {
@@ -182,6 +186,82 @@ function UserDetailPopup({ userId, onClose, onDelete, onSave }) {
                 <p className="text-sm text-gray-400 py-2">אין זכרונות</p>
               )}
             </div>
+
+            {/* Token usage */}
+            <div className="px-6 pt-5">
+              <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                <span className="material-symbols-outlined text-lg text-indigo-500">token</span>
+                שימוש בטוקנים
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-indigo-50/50 rounded-xl border border-indigo-100 text-center">
+                  <p className="text-xs text-gray-500 mb-1">סה״כ טוקנים</p>
+                  <p className="text-lg font-extrabold text-indigo-700">{(user.totalTokens || 0).toLocaleString()}</p>
+                </div>
+                <div className="p-3 bg-emerald-50/50 rounded-xl border border-emerald-100 text-center">
+                  <p className="text-xs text-gray-500 mb-1">עלות</p>
+                  <p className="text-lg font-extrabold text-emerald-700" dir="ltr">${(user.totalCost || 0).toFixed(4)}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Send push notification */}
+            {user.program?.fcmToken && (
+              <div className="px-6 pt-5">
+                <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-lg text-orange-500">notifications_active</span>
+                  שליחת Push
+                </h3>
+                <div className="space-y-2">
+                  <input
+                    value={pushTitle}
+                    onChange={e => setPushTitle(e.target.value)}
+                    className="w-full h-10 px-3 rounded-xl border-2 border-gray-200 bg-gray-50/50 text-sm outline-none focus:border-primary"
+                    placeholder="כותרת ההתראה"
+                  />
+                  <input
+                    value={pushBody}
+                    onChange={e => setPushBody(e.target.value)}
+                    className="w-full h-10 px-3 rounded-xl border-2 border-gray-200 bg-gray-50/50 text-sm outline-none focus:border-primary"
+                    placeholder="תוכן ההתראה"
+                  />
+                  <button
+                    onClick={async () => {
+                      if (!pushTitle.trim() || !pushBody.trim()) return
+                      setPushSending(true)
+                      setPushResult(null)
+                      try {
+                        const res = await api.sendPushToUser(userId, pushTitle, pushBody)
+                        setPushResult(res.success ? 'נשלח!' : 'נכשל')
+                        if (res.success) { setPushTitle(''); setPushBody('') }
+                      } catch { setPushResult('שגיאה בשליחה') }
+                      setPushSending(false)
+                      setTimeout(() => setPushResult(null), 3000)
+                    }}
+                    disabled={pushSending || !pushTitle.trim() || !pushBody.trim()}
+                    className="w-full h-10 rounded-xl font-bold text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-50 transition-colors flex items-center justify-center gap-2 text-sm"
+                  >
+                    {pushSending ? (
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <span className="material-symbols-outlined text-lg">send</span>
+                    )}
+                    {pushSending ? 'שולח...' : 'שלח התראה'}
+                  </button>
+                  {pushResult && (
+                    <p className={`text-xs text-center font-semibold ${pushResult === 'נשלח!' ? 'text-emerald-600' : 'text-red-500'}`}>{pushResult}</p>
+                  )}
+                </div>
+              </div>
+            )}
+            {!user.program?.fcmToken && (
+              <div className="px-6 pt-5">
+                <p className="text-xs text-gray-400 flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-sm">notifications_off</span>
+                  למשתמש זה אין FCM token — לא ניתן לשלוח push
+                </p>
+              </div>
+            )}
 
             {/* Actions */}
             <div className="p-6 pt-5 flex items-center gap-3 border-t border-gray-100 mt-5">

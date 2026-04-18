@@ -7,7 +7,7 @@ function parseSSEStream(body, { onUserMessage, onChunk, onDone, onError }) {
     const reader = body.getReader()
     const decoder = new TextDecoder()
     let buffer = ''
-    let finalMessage = null
+    let finalResult = null
 
     while (true) {
       const { done, value } = await reader.read()
@@ -26,14 +26,18 @@ function parseSSEStream(body, { onUserMessage, onChunk, onDone, onError }) {
           const event = JSON.parse(payload)
           if (event.type === 'user_message') onUserMessage?.(event.message)
           else if (event.type === 'chunk') onChunk?.(event.content)
-          else if (event.type === 'done') finalMessage = event.message
+          else if (event.type === 'done') finalResult = { message: event.message, boundaryCount: event.boundaryCount }
           else if (event.type === 'error') onError?.(event.error)
         } catch {}
       }
     }
 
-    resolve(finalMessage)
+    resolve(finalResult)
   })
+}
+
+function tokenize(text) {
+  return text.match(/\S+\s*/g) || []
 }
 
 export const useChatStore = create((set, get) => ({
@@ -43,7 +47,9 @@ export const useChatStore = create((set, get) => ({
   loading: false,
   sending: false,
   streamingContent: '',
+  streamingMessageId: null,
   isTempChat: false,
+  boundaryCount: 0,
 
   loadConversations: async () => {
     set({ loading: true })
@@ -99,28 +105,84 @@ export const useChatStore = create((set, get) => ({
     const { currentConversation, messages: currentMessages, isTempChat } = get()
     if (!currentConversation || !content.trim()) return
 
-    set({ sending: true, streamingContent: '' })
+    set({ sending: true, streamingContent: '', streamingMessageId: null })
 
     const tempId = 'temp-' + Date.now()
     const tempMsg = { id: tempId, role: 'user', content, timestamp: new Date().toISOString() }
-    set((state) => ({ messages: [...state.messages, tempMsg] }))
 
-    let accumulated = ''
+    // Add user message + placeholder assistant message immediately
+    const assistantPlaceholderId = 'ai-' + Date.now()
+    set((state) => ({
+      messages: [
+        ...state.messages,
+        tempMsg,
+        { id: assistantPlaceholderId, role: 'assistant', content: '', timestamp: new Date().toISOString(), _streaming: true }
+      ],
+      streamingMessageId: assistantPlaceholderId,
+    }))
+
+    // Producer-consumer: server fills buffer, we display at our pace
+    let serverBuffer = ''
+    let displayedCharCount = 0
+    let serverDone = false
+    let animTimer = null
+
+    const WORDS_PER_SECOND = 12
+    const INTERVAL = 1000 / WORDS_PER_SECOND
+
+    function updateMessageContent(text) {
+      set((state) => ({
+        messages: state.messages.map(m =>
+          m.id === assistantPlaceholderId ? { ...m, content: text } : m
+        )
+      }))
+    }
+
+    function scheduleNextWord() {
+      animTimer = setTimeout(() => {
+        const words = tokenize(serverBuffer)
+        let charTarget = 0
+        let found = false
+        for (const w of words) {
+          charTarget += w.length
+          if (charTarget > displayedCharCount) {
+            displayedCharCount = charTarget
+            found = true
+            break
+          }
+        }
+
+        if (found) {
+          updateMessageContent(serverBuffer.slice(0, displayedCharCount))
+          scheduleNextWord()
+        } else if (!serverDone) {
+          // Buffer empty, server still sending — pause, will resume on next chunk
+          animTimer = null
+        } else {
+          // All done
+          animTimer = null
+        }
+      }, INTERVAL)
+    }
+
+    function kickAnimation() {
+      if (!animTimer) scheduleNextWord()
+    }
 
     try {
       const body = isTempChat
         ? await api.sendTempMessageStream(content, currentMessages)
         : await api.sendMessageStream(currentConversation.id, content)
 
-      const finalAssistantMessage = await parseSSEStream(body, {
+      const finalResult = await parseSSEStream(body, {
         onUserMessage: (msg) => {
           set((state) => ({
             messages: state.messages.map(m => m.id === tempId ? msg : m)
           }))
         },
         onChunk: (chunk) => {
-          accumulated += chunk
-          set({ streamingContent: accumulated })
+          serverBuffer += chunk
+          kickAnimation()
         },
         onError: (err) => {
           console.error('Stream error:', err)
@@ -128,8 +190,27 @@ export const useChatStore = create((set, get) => ({
         },
       })
 
-      if (finalAssistantMessage) {
-        // Step 1: add message to list (streaming bubble still visible)
+      serverDone = true
+      kickAnimation()
+
+      if (finalResult?.message) {
+        // Wait for animation to finish all remaining words
+        await new Promise((resolve) => {
+          function check() {
+            const words = tokenize(serverBuffer)
+            let totalChars = 0
+            for (const w of words) totalChars += w.length
+            if (displayedCharCount >= totalChars) {
+              resolve()
+            } else {
+              kickAnimation()
+              setTimeout(check, 50)
+            }
+          }
+          check()
+        })
+
+        // Seamlessly replace placeholder with final message (same ID, same position, no flash)
         set((state) => {
           const convs = isTempChat ? state.conversations : state.conversations.map(c => {
             if (c.id === currentConversation.id) {
@@ -138,21 +219,32 @@ export const useChatStore = create((set, get) => ({
             return c
           })
           return {
-            messages: [...state.messages, finalAssistantMessage],
+            messages: state.messages.map(m =>
+              m.id === assistantPlaceholderId
+                ? { ...finalResult.message, id: assistantPlaceholderId }
+                : m
+            ),
             conversations: convs,
+            boundaryCount: finalResult.boundaryCount ?? state.boundaryCount,
+            sending: false,
+            streamingMessageId: null,
           }
         })
-        // Step 2: clear streaming on next frame (message already in DOM)
-        await new Promise(r => requestAnimationFrame(r))
-        set({ sending: false, streamingContent: '' })
       } else {
-        set({ sending: false, streamingContent: '' })
+        if (animTimer) clearTimeout(animTimer)
+        // Remove placeholder if no result
+        set((state) => ({
+          messages: state.messages.filter(m => m.id !== assistantPlaceholderId),
+          sending: false,
+          streamingMessageId: null,
+        }))
       }
     } catch {
+      if (animTimer) clearTimeout(animTimer)
       set((state) => ({
-        messages: state.messages.filter(m => m.id !== tempId),
+        messages: state.messages.filter(m => m.id !== tempId && m.id !== assistantPlaceholderId),
         sending: false,
-        streamingContent: '',
+        streamingMessageId: null,
       }))
       toast.error('שגיאה בשליחת ההודעה. בדקו את החיבור ונסו שוב.')
     }

@@ -119,6 +119,7 @@ export function renderMarkdown(text) {
     .replace(/\s*\[\[common_mistake:[^\]]+\]\]/g, '')
     .replace(/\s*\[\[follow_up_question:[^\]]+\]\]/g, '')
     .replace(/\s*\[\[followup:[^\]]+\]\]/g, '')
+    .replace(/\s*\[\[boundary_related:[^\]]+\]\]/g, '')
     .replace(/\n\n/g, '</p><p class="mt-3">')
     .replace(/\n/g, '<br>')
 }

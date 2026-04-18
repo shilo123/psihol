@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getAllUsers, countConversations, getSystemPrompt, setSystemPrompt, getTechnicalPrompt, setTechnicalPrompt, getTokenUsageStats, findUserById, updateUser, getMemories, getDb, getSetting, setSetting, getLowConfidenceQuestions, deleteLowConfidenceQuestion } from '../db.js';
+import { sendPushNotification } from '../pushNotifications.js';
 
 const router = Router();
 
@@ -187,6 +188,26 @@ router.delete('/low-confidence/:id', async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     console.error('Delete low-confidence question error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /send-push/:userId — send custom push notification to user
+router.post('/send-push/:userId', async (req, res) => {
+  try {
+    const { title, body } = req.body;
+    if (!title || !body) return res.status(400).json({ error: 'Title and body are required' });
+
+    const user = await findUserById(req.params.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const fcmToken = user.program?.fcmToken;
+    if (!fcmToken) return res.status(400).json({ error: 'User has no FCM token' });
+
+    const success = await sendPushNotification(fcmToken, title, body);
+    res.json({ success });
+  } catch (error) {
+    console.error('Send push error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

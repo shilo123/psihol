@@ -141,17 +141,29 @@ const MODEL_PRICING = {
   'gpt-4.1-mini': { input: 0.40, output: 1.60 },
 };
 
-export async function trackTokenUsage({ inputTokens, outputTokens, model = 'gpt-4.1' }) {
+export async function trackTokenUsage({ inputTokens, outputTokens, model = 'gpt-4.1', userId = null }) {
   const database = await getDb();
   const pricing = MODEL_PRICING[model] || MODEL_PRICING['gpt-4.1'];
+  const inputCost = (inputTokens / 1_000_000) * pricing.input;
+  const outputCost = (outputTokens / 1_000_000) * pricing.output;
   await database.collection('token_usage').insertOne({
     inputTokens,
     outputTokens,
     model,
-    inputCost: (inputTokens / 1_000_000) * pricing.input,
-    outputCost: (outputTokens / 1_000_000) * pricing.output,
+    userId,
+    inputCost,
+    outputCost,
     timestamp: new Date(),
   });
+  // Also accumulate on the user document
+  if (userId) {
+    await database.collection('users').updateOne({ id: userId }, {
+      $inc: {
+        totalTokens: inputTokens + outputTokens,
+        totalCost: inputCost + outputCost,
+      }
+    });
+  }
 }
 
 export async function getTokenUsageStats() {
@@ -360,6 +372,67 @@ export async function deleteLowConfidenceQuestion(id) {
   const database = await getDb();
   const result = await database.collection('low_confidence_questions').deleteOne({ id });
   return result.deletedCount > 0;
+}
+
+// --- Program (intervention) ---
+export async function startProgram(userId, programId) {
+  const database = await getDb();
+  await database.collection('users').updateOne({ id: userId }, {
+    $set: {
+      program: {
+        programId,
+        startedAt: new Date().toISOString(),
+        notificationsEnabled: false,
+        fcmToken: null,
+      }
+    }
+  });
+}
+
+// Calculate current program day based on start date (auto, not manual)
+export function calculateProgramDay(startedAt) {
+  const start = new Date(startedAt);
+  const now = new Date();
+  // Reset to midnight Israel time (UTC+3) for accurate day calculation
+  const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diffDays = Math.floor((today - startDay) / (1000 * 60 * 60 * 24));
+  const currentDay = diffDays + 1; // Day 1 on start date
+  if (currentDay > 5) return { day: 5, completed: true };
+  if (currentDay < 1) return { day: 1, completed: false };
+  return { day: currentDay, completed: false };
+}
+
+export async function dismissProgram(userId) {
+  const database = await getDb();
+  await database.collection('users').updateOne({ id: userId }, {
+    $set: { programDismissed: true }
+  });
+}
+
+export async function incrementBoundaryCount(userId) {
+  const database = await getDb();
+  await database.collection('users').updateOne({ id: userId }, {
+    $inc: { boundaryQuestionCount: 1 }
+  });
+  const user = await database.collection('users').findOne({ id: userId });
+  return user?.boundaryQuestionCount || 0;
+}
+
+export async function saveFcmToken(userId, token) {
+  const database = await getDb();
+  await database.collection('users').updateOne({ id: userId }, {
+    $set: { 'program.fcmToken': token, 'program.notificationsEnabled': true }
+  });
+}
+
+export async function getUsersWithActivePrograms() {
+  const database = await getDb();
+  return database.collection('users').find({
+    'program.programId': { $exists: true },
+    'program.fcmToken': { $ne: null },
+    'program.notificationsEnabled': true,
+  }).toArray();
 }
 
 // --- Auth helper ---
