@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '../../shared/authStore'
 import { useChatStore } from '../../shared/chatStore'
-import { formatTime, renderMarkdown, extractAddChildData, extractUpdateChildData, extractFollowups, extractCommonMistake, extractFollowUpQuestion, PERSONALITIES } from '../../shared/constants'
+import { formatTime, renderMarkdown, extractAddChildData, extractUpdateChildData, extractFollowups, extractCommonMistake, PERSONALITIES } from '../../shared/constants'
 import { api } from '../../shared/api'
 import allSuggestions from '../../shared/suggestions.json'
 
@@ -1656,9 +1656,8 @@ export default function ChatPage() {
                             <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                           </div>
                         ) : (
-                          /* AI card — clean, trustworthy, warm */
-                          <div className="relative bg-white dark:bg-surface-dark rounded-2xl rounded-tr-md shadow-md shadow-gray-200/60 dark:shadow-none hover:shadow-lg transition-shadow duration-300 overflow-hidden ai-card-enter border border-gray-100 dark:border-gray-700/50">
-                            <div className="h-[3px] bg-gradient-to-r from-primary/30 via-purple-400/30 to-pink-300/30" />
+                          /* AI message — bare, conversational */
+                          <div className="relative rounded-2xl rounded-tr-md overflow-hidden ai-card-enter">
                             <div className="p-5 md:p-6">
                               <div
                                 className={`text-[14px] text-text-main dark:text-gray-200 leading-[1.8] prose-sm${childAlreadySelected ? ' child-selected' : ''}`}
@@ -1722,29 +1721,6 @@ export default function ChatPage() {
                           </div>
                         )}
 
-                        {/* Follow-up questions — outside the bubble */}
-                        {!isUser && (() => {
-                          const followups = extractFollowups(msg.content)
-                          if (followups.length === 0) return null
-                          return (
-                            <div className="mt-3 space-y-2 pr-1">
-                              {followups.map((q, fi) => (
-                                <button
-                                  key={fi}
-                                  onClick={() => { if (!sending) sendMessage(q) }}
-                                  disabled={sending}
-                                  className="w-full flex items-center gap-3 px-4 py-3 bg-white dark:bg-surface-dark border-2 border-primary/15 rounded-2xl text-right hover:border-primary/40 hover:bg-primary/[0.03] active:scale-[0.98] transition-all duration-200 disabled:opacity-50 group"
-                                >
-                                  <span className="shrink-0 size-7 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                                    <span className="material-symbols-rounded text-primary text-base">chat_bubble</span>
-                                  </span>
-                                  <span className="flex-1 text-[13px] font-medium text-text-main dark:text-gray-300 leading-relaxed">{q}</span>
-                                  <span className="material-symbols-rounded text-gray-300 text-base shrink-0 group-hover:text-primary/60 group-hover:translate-x-[-2px] transition-all">arrow_back</span>
-                                </button>
-                              ))}
-                            </div>
-                          )
-                        })()}
 
                         {/* Timestamp for user messages */}
                         {isUser && msg.timestamp && (
@@ -1798,23 +1774,27 @@ export default function ChatPage() {
             <div className="h-12 bg-gradient-to-t from-chat-bg dark:from-background-dark to-transparent pointer-events-none" />
 
             <div className="bg-chat-bg dark:bg-background-dark px-3 sm:px-4 md:px-8 pb-5">
-              {/* Follow-up question — above input */}
+              {/* ── Follow-up suggestions — small horizontal-scroll chips above input ── */}
               {(() => {
                 const lastAiMsg = [...messages].reverse().find(m => m.role === 'assistant')
-                const fuq = lastAiMsg ? extractFollowUpQuestion(lastAiMsg.content) : null
-                if (!fuq || sending) return null
+                const followups = lastAiMsg ? extractFollowups(lastAiMsg.content) : []
+                if (followups.length === 0 || sending) return null
                 return (
-                  <div className="max-w-3xl mx-auto mb-2">
-                    <button
-                      onClick={() => { if (!sending) sendMessage(fuq) }}
-                      className="w-full flex items-start gap-2.5 px-4 py-2.5 bg-white dark:bg-surface-dark border border-primary/20 rounded-xl text-right hover:border-primary/40 active:scale-[0.99] transition-all"
-                    >
-                      <span className="material-symbols-rounded text-primary text-sm mt-0.5 shrink-0">reply</span>
-                      <div className="flex-1 min-w-0">
-                        <span className="text-[11px] font-semibold text-primary block mb-0.5">הגב לשאלה</span>
-                        <span className="text-xs text-text-main dark:text-gray-300 leading-relaxed">{fuq}</span>
-                      </div>
-                    </button>
+                  <div className="max-w-3xl mx-auto mb-2 -mx-1 followup-chips-wrap">
+                    <div className="flex gap-2 overflow-x-auto px-1 py-1 followup-chips-scroll" dir="rtl">
+                      {followups.map((q, fi) => (
+                        <button
+                          key={fi}
+                          onClick={() => { if (!sending) sendMessage(q) }}
+                          disabled={sending}
+                          style={{ animationDelay: `${fi * 70}ms` }}
+                          className="followup-chip shrink-0 group relative px-3.5 py-1.5 bg-white dark:bg-surface-dark/80 border border-primary/25 rounded-full text-[12px] font-medium text-text-main dark:text-gray-200 whitespace-nowrap hover:border-primary/55 hover:bg-primary/[0.06] hover:-translate-y-0.5 hover:shadow-md hover:shadow-primary/15 active:scale-[0.96] transition-all duration-200 disabled:opacity-50 backdrop-blur-sm"
+                        >
+                          <span className="absolute inset-0 rounded-full bg-gradient-to-l from-primary/[0.08] via-transparent to-pink-300/[0.06] opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                          <span className="relative">{q}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )
               })()}
@@ -2236,6 +2216,27 @@ export default function ChatPage() {
         }
         .ai-card-enter {
           animation: aiCardEnter 0.45s ease-out forwards;
+        }
+
+        /* ---- Follow-up chips — horizontal scroll + entrance ---- */
+        @keyframes followupChipEnter {
+          0% { opacity: 0; transform: translateY(8px) scale(0.92); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .followup-chip {
+          animation: followupChipEnter 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+        }
+        .followup-chips-scroll {
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+          scroll-behavior: smooth;
+          scroll-snap-type: x proximity;
+        }
+        .followup-chips-scroll::-webkit-scrollbar { display: none; }
+        .followup-chips-scroll > * { scroll-snap-align: start; }
+        .followup-chips-wrap {
+          mask-image: linear-gradient(to left, transparent 0, black 16px, black calc(100% - 16px), transparent 100%);
+          -webkit-mask-image: linear-gradient(to left, transparent 0, black 16px, black calc(100% - 16px), transparent 100%);
         }
 
         /* ---- Avatar breathing — creates sense of presence ---- */
