@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getAllUsers, countConversations, getSystemPrompt, setSystemPrompt, getTechnicalPrompt, setTechnicalPrompt, getTokenUsageStats, findUserById, updateUser, getMemories, getDb, getSetting, setSetting, getLowConfidenceQuestions, deleteLowConfidenceQuestion } from '../db.js';
+import { getAllUsers, countConversations, getSystemPrompt, setSystemPrompt, getTechnicalPrompt, setTechnicalPrompt, getTokenUsageStats, findUserById, updateUser, getMemories, getDb, getSetting, setSetting, getLowConfidenceQuestions, deleteLowConfidenceQuestion, clearFcmToken } from '../db.js';
 import { sendPushNotification } from '../pushNotifications.js';
 
 const router = Router();
@@ -202,10 +202,24 @@ router.post('/send-push/:userId', async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const fcmToken = user.program?.fcmToken;
-    if (!fcmToken) return res.status(400).json({ error: 'User has no FCM token' });
+    if (!fcmToken) return res.status(400).json({ error: 'User has no FCM token', code: 'no-token' });
 
-    const success = await sendPushNotification(fcmToken, title, body);
-    res.json({ success });
+    const result = await sendPushNotification(fcmToken, title, body);
+
+    if (!result.ok && result.unregistered) {
+      await clearFcmToken(user.id).catch(() => {});
+      return res.status(410).json({
+        success: false,
+        code: 'token-expired',
+        error: 'ה-Token של המשתמש פג תוקף — נוקה מה-DB. המשתמש צריך לאשר התראות מחדש.',
+      });
+    }
+
+    if (!result.ok) {
+      return res.status(502).json({ success: false, code: result.reason || 'send-failed', error: `FCM שגיאה: ${result.reason}` });
+    }
+
+    res.json({ success: true });
   } catch (error) {
     console.error('Send push error:', error);
     res.status(500).json({ error: 'Internal server error' });

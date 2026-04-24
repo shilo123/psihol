@@ -1,7 +1,7 @@
 // Server-side push notification sending via FCM HTTP v1 API
 // Requires FIREBASE_SERVICE_ACCOUNT env var (JSON string of service account key)
 
-import { getUsersWithActivePrograms, calculateProgramDay } from './db.js';
+import { getUsersWithActivePrograms, calculateProgramDay, clearFcmToken } from './db.js';
 
 let accessToken = null;
 let tokenExpiry = 0;
@@ -55,7 +55,7 @@ async function getAccessToken() {
 
 export async function sendPushNotification(fcmToken, title, body) {
   const token = await getAccessToken();
-  if (!token) return false;
+  if (!token) return { ok: false, reason: 'no-access-token' };
 
   const saJson = process.env.FIREBASE_SERVICE_ACCOUNT;
   const sa = JSON.parse(saJson);
@@ -77,6 +77,10 @@ export async function sendPushNotification(fcmToken, title, body) {
             dir: 'rtl',
             lang: 'he',
             tag: 'program-reminder',
+            requireInteraction: false,
+          },
+          fcm_options: {
+            link: '/',
           },
         },
       },
@@ -84,12 +88,18 @@ export async function sendPushNotification(fcmToken, title, body) {
   });
 
   if (!res.ok) {
-    const err = await res.text();
-    console.error('[FCM] Send failed:', err);
-    return false;
+    const errText = await res.text();
+    console.error('[FCM] Send failed:', errText);
+    let errorCode = null;
+    try {
+      const parsed = JSON.parse(errText);
+      errorCode = parsed?.error?.details?.[0]?.errorCode || parsed?.error?.status;
+    } catch {}
+    const unregistered = errorCode === 'UNREGISTERED' || errorCode === 'NOT_FOUND' || errorCode === 'INVALID_ARGUMENT';
+    return { ok: false, reason: errorCode || 'send-failed', unregistered, httpStatus: res.status };
   }
 
-  return true;
+  return { ok: true };
 }
 
 const DAY_TITLES = {
@@ -120,9 +130,16 @@ export async function sendDailyProgramReminders() {
     const body = `הנושא של היום: ${dayTitle}. בואי נמשיך!`;
 
     try {
-      const ok = await sendPushNotification(user.program.fcmToken, title, body);
-      if (ok) sent++;
-      else failed++;
+      const result = await sendPushNotification(user.program.fcmToken, title, body);
+      if (result.ok) {
+        sent++;
+      } else {
+        failed++;
+        if (result.unregistered) {
+          // Token is dead — clear it so the user is asked to re-subscribe next time
+          await clearFcmToken(user.id).catch(() => {});
+        }
+      }
     } catch {
       failed++;
     }

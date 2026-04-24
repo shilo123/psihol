@@ -198,9 +198,22 @@ function ProgramDayTab({ programStatus, minimized, onMinimize, onRestore, onAskQ
   const [expanded, setExpanded] = useState(false)
   const [showQuitConfirm, setShowQuitConfirm] = useState(false)
 
-  if (!programStatus?.active || !programStatus.dayContent) return null
+  const currentDay = programStatus?.currentDay
+  const totalDays = programStatus?.totalDays || 5
+  const availableDays = programStatus?.availableDays || (programStatus?.dayContent ? [programStatus.dayContent] : [])
 
-  const { currentDay, dayContent, programTitle } = programStatus
+  const [selectedDay, setSelectedDay] = useState(currentDay || 1)
+
+  // Follow currentDay when it changes (e.g. app refreshes after a day passes)
+  useEffect(() => {
+    if (currentDay) setSelectedDay(currentDay)
+  }, [currentDay])
+
+  if (!programStatus?.active || !availableDays.length) return null
+
+  const dayContent = availableDays.find(d => d.day === selectedDay) || availableDays[availableDays.length - 1]
+  const { programTitle } = programStatus
+  const isViewingPast = selectedDay !== currentDay
 
   // Minimized = don't render the big card (the mini button is in the topbar)
   if (minimized) return null
@@ -222,13 +235,19 @@ function ProgramDayTab({ programStatus, minimized, onMinimize, onRestore, onAskQ
           className="w-full flex items-center gap-2.5 px-3 py-2 text-right hover:bg-emerald-50/50 dark:hover:bg-emerald-900/10 transition-colors"
         >
           {/* Day badge */}
-          <div className="shrink-0 size-8 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center">
-            <span className="text-white text-xs font-extrabold">{currentDay}/5</span>
+          <div className={`shrink-0 size-8 rounded-lg flex items-center justify-center ${
+            isViewingPast
+              ? 'bg-gradient-to-br from-gray-300 to-gray-400 dark:from-gray-600 dark:to-gray-700'
+              : 'bg-gradient-to-br from-emerald-400 to-teal-500'
+          }`}>
+            <span className="text-white text-xs font-extrabold">{selectedDay}/{totalDays}</span>
           </div>
 
           <div className="flex-1 min-w-0">
             <p className="text-[12px] sm:text-[13px] font-semibold text-text-main dark:text-gray-200 truncate">
-              <span className="text-emerald-600 dark:text-emerald-400">יום {currentDay}</span>
+              <span className={isViewingPast ? 'text-gray-500 dark:text-gray-400' : 'text-emerald-600 dark:text-emerald-400'}>
+                יום {selectedDay}{isViewingPast ? ' · יום קודם' : ''}
+              </span>
               <span className="text-gray-300 mx-1">·</span>
               {dayContent.title}
             </p>
@@ -236,9 +255,10 @@ function ProgramDayTab({ programStatus, minimized, onMinimize, onRestore, onAskQ
 
           {/* Progress dots */}
           <div className="shrink-0 flex gap-1 items-center">
-            {[1,2,3,4,5].map(d => (
+            {Array.from({ length: totalDays }, (_, i) => i + 1).map(d => (
               <div key={d} className={`size-1.5 rounded-full ${
-                d < currentDay ? 'bg-emerald-400' : d === currentDay ? 'bg-emerald-500 ring-1 ring-emerald-200' : 'bg-gray-200 dark:bg-gray-600'
+                d === selectedDay ? 'bg-emerald-500 ring-1 ring-emerald-200 scale-125' :
+                d < currentDay ? 'bg-emerald-400' : d === currentDay ? 'bg-emerald-500/60' : 'bg-gray-200 dark:bg-gray-600'
               }`} />
             ))}
           </div>
@@ -251,11 +271,55 @@ function ProgramDayTab({ programStatus, minimized, onMinimize, onRestore, onAskQ
         {/* Expanded content */}
         {expanded && (
           <div className="px-4 pb-4 border-t border-emerald-100 dark:border-emerald-800/50 anim-fade-in-up">
+            {/* Day selector — only show when more than day 1 */}
+            {currentDay > 1 && (
+              <div className="mt-3 -mx-1 px-1 overflow-x-auto scrollbar-hide">
+                <div className="flex gap-1.5 min-w-max">
+                  {Array.from({ length: totalDays }, (_, i) => i + 1).map(d => {
+                    const unlocked = d <= currentDay
+                    const isSelected = d === selectedDay
+                    const isCurrent = d === currentDay
+                    return (
+                      <button
+                        key={d}
+                        onClick={() => unlocked && setSelectedDay(d)}
+                        disabled={!unlocked}
+                        className={`flex-shrink-0 flex items-center gap-1 px-2.5 h-8 rounded-lg text-[11px] font-bold transition-all ${
+                          isSelected
+                            ? 'bg-emerald-500 text-white shadow-sm'
+                            : unlocked
+                              ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/30'
+                              : 'bg-gray-50 dark:bg-gray-800/50 text-gray-300 dark:text-gray-600 cursor-not-allowed'
+                        }`}
+                      >
+                        {!unlocked && <span className="material-symbols-rounded text-[13px]">lock</span>}
+                        <span>יום {d}</span>
+                        {isCurrent && !isSelected && (
+                          <span className="size-1.5 rounded-full bg-emerald-500" />
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* "Back to today" pill when viewing a past day */}
+            {isViewingPast && (
+              <button
+                onClick={() => setSelectedDay(currentDay)}
+                className="mt-3 w-full flex items-center justify-center gap-1.5 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 text-[12px] font-bold hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors"
+              >
+                <span className="material-symbols-rounded text-[15px]">today</span>
+                חזרה ליום של היום (יום {currentDay})
+              </button>
+            )}
+
             {/* Instructions */}
             <div className="mt-3">
               <h4 className="text-xs font-bold text-emerald-700 dark:text-emerald-400 mb-2 flex items-center gap-1.5">
                 <span className="material-symbols-rounded text-sm">checklist</span>
-                מה עושים היום
+                {isViewingPast ? `מה עשינו ביום ${selectedDay}` : 'מה עושים היום'}
               </h4>
               <ul className="space-y-1.5">
                 {dayContent.instructions.map((inst, i) => (
@@ -315,11 +379,11 @@ function ProgramDayTab({ programStatus, minimized, onMinimize, onRestore, onAskQ
 
             {/* Ask question button */}
             <button
-              onClick={() => { setExpanded(false); onAskQuestion?.() }}
+              onClick={() => { setExpanded(false); onAskQuestion?.(selectedDay) }}
               className="mt-4 w-full h-11 rounded-xl font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-all flex items-center justify-center gap-2 text-sm"
             >
               <span className="material-symbols-rounded text-lg">chat</span>
-              רוצה לשאול על הנושא של היום
+              {isViewingPast ? `רוצה לשאול על יום ${selectedDay}` : 'רוצה לשאול על הנושא של היום'}
             </button>
 
             {/* Bottom controls: notifications toggle + quit */}

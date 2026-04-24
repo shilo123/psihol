@@ -420,6 +420,13 @@ export async function saveFcmToken(userId, token) {
   });
 }
 
+export async function clearFcmToken(userId) {
+  const database = await getDb();
+  await database.collection('users').updateOne({ id: userId }, {
+    $set: { 'program.fcmToken': null, 'program.notificationsEnabled': false }
+  });
+}
+
 export async function getUsersWithActivePrograms() {
   const database = await getDb();
   return database.collection('users').find({

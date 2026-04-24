@@ -151,13 +151,23 @@ router.get('/program/status', async (req, res) => {
 
     const rawDay = boundariesProgram.days.find(d => d.day === currentDay) || null;
     const dayContent = rawDay ? resolveDayContent(rawDay, user.parentGender) : null;
+
+    // All days up to the current one — so the parent can revisit past days
+    const availableDays = [];
+    for (let d = 1; d <= currentDay; d++) {
+      const raw = boundariesProgram.days.find(x => x.day === d);
+      if (raw) availableDays.push(resolveDayContent(raw, user.parentGender));
+    }
+
     res.json({
       active: true,
       dismissed: false,
       programId: user.program.programId,
       currentDay,
+      totalDays: boundariesProgram.days.length,
       startedAt: user.program.startedAt,
       dayContent,
+      availableDays,
       programTitle: boundariesProgram.title,
       boundaryQuestionCount: user.boundaryQuestionCount || 0,
       notificationsEnabled: !!user.program.notificationsEnabled,
@@ -175,7 +185,14 @@ router.post('/program/start', async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Unauthorized' });
     await startProgram(user.id, 'boundaries');
     const dayContent = resolveDayContent(boundariesProgram.days[0], user.parentGender);
-    res.json({ success: true, currentDay: 1, dayContent, programTitle: boundariesProgram.title });
+    res.json({
+      success: true,
+      currentDay: 1,
+      totalDays: boundariesProgram.days.length,
+      dayContent,
+      availableDays: [dayContent],
+      programTitle: boundariesProgram.title,
+    });
   } catch (error) {
     console.error('Start program error:', error);
     res.status(500).json({ error: 'Internal server error' });
