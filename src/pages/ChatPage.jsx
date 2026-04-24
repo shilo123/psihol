@@ -1035,8 +1035,11 @@ export default function ChatPage() {
     }
 
     try {
-      const { requestNotificationPermission } = await import('../../shared/firebase.js')
-      const token = await requestNotificationPermission()
+      // Force-refresh the token: delete any cached one (which may be stale/dead)
+      // and generate a brand new one. Prevents Chrome from returning the same
+      // expired token over and over.
+      const { refreshNotificationToken } = await import('../../shared/firebase.js')
+      const token = await refreshNotificationToken()
       if (!token) {
         if (Notification.permission === 'denied') {
           toast.error('ההתראות חסומות — יש לאשר אותן בהגדרות הדפדפן')
