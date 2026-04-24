@@ -171,6 +171,7 @@ router.get('/program/status', async (req, res) => {
       programTitle: boundariesProgram.title,
       boundaryQuestionCount: user.boundaryQuestionCount || 0,
       notificationsEnabled: !!user.program.notificationsEnabled,
+      hasFcmToken: !!user.program.fcmToken,
     });
   } catch (error) {
     console.error('Get program status error:', error);

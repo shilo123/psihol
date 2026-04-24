@@ -949,10 +949,28 @@ export default function ChatPage() {
   // Load program status on login
   useEffect(() => {
     if (isLoggedIn && user && !user.isOffline && !isGuest) {
-      api.getProgramStatus().then(status => {
+      api.getProgramStatus().then(async status => {
         setProgramStatus(status)
         if (status.boundaryQuestionCount !== undefined) {
           useChatStore.setState({ boundaryCount: status.boundaryQuestionCount })
+        }
+
+        // Auto-ensure the user has a fresh FCM token when they enter the chat.
+        // Silent: only if permission is already granted (never auto-prompts).
+        // Fires for active-program users whose token was dropped (e.g. cleared
+        // by the server after UNREGISTERED, or never produced due to an earlier bug).
+        if (status.active && !status.hasFcmToken &&
+            typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+          try {
+            const { refreshNotificationToken } = await import('../../shared/firebase.js')
+            const token = await refreshNotificationToken()
+            if (token) {
+              await api.saveFcmToken(token)
+              setProgramStatus(prev => prev ? { ...prev, hasFcmToken: true, notificationsEnabled: true } : prev)
+            }
+          } catch (e) {
+            console.warn('[FCM] silent token refresh failed:', e)
+          }
         }
       }).catch(() => {})
     }
@@ -1006,55 +1024,80 @@ export default function ChatPage() {
     setProgramStatus({ active: false, dismissed: false })
   }
 
+  const togglingNotificationsRef = useRef(false)
+
   async function handleToggleNotifications() {
-    const currentlyEnabled = !!programStatus?.notificationsEnabled
+    // Prevent overlapping toggles while an async op is in flight
+    if (togglingNotificationsRef.current) return
+    togglingNotificationsRef.current = true
 
-    if (currentlyEnabled) {
-      // Turning OFF — simple server toggle
-      try {
-        const result = await api.toggleProgramNotifications()
-        setProgramStatus(prev => prev ? { ...prev, notificationsEnabled: result.notificationsEnabled } : prev)
-      } catch {
-        toast.error('לא הצלחתי לכבות התראות, נסו שוב')
-      }
-      return
-    }
+    const previousValue = !!programStatus?.notificationsEnabled
+    const targetValue = !previousValue
 
-    // Turning ON — permission + token FIRST, only then flip server flag
-    if (typeof Notification === 'undefined') {
-      toast.error('הדפדפן לא תומך בהתראות')
-      return
-    }
+    // Optimistic: flip the UI immediately so the switch feels responsive.
+    // We revert below if the async work fails.
+    setProgramStatus(prev => prev ? { ...prev, notificationsEnabled: targetValue } : prev)
 
-    // Quick iOS PWA check: iOS only allows push inside an installed PWA
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream
-    const isStandalone = window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone
-    if (isIOS && !isStandalone) {
-      toast.error('באייפון צריך קודם להוסיף את האתר למסך הבית ולפתוח משם')
-      return
-    }
+    const revert = () => setProgramStatus(prev => prev ? { ...prev, notificationsEnabled: previousValue } : prev)
 
     try {
-      // Force-refresh the token: delete any cached one (which may be stale/dead)
-      // and generate a brand new one. Prevents Chrome from returning the same
-      // expired token over and over.
-      const { refreshNotificationToken } = await import('../../shared/firebase.js')
-      const token = await refreshNotificationToken()
-      if (!token) {
-        if (Notification.permission === 'denied') {
-          toast.error('ההתראות חסומות — יש לאשר אותן בהגדרות הדפדפן')
-        } else {
-          toast.error('לא הצלחתי לייצר Token, נסו שוב')
+      if (!targetValue) {
+        // Turning OFF — simple server toggle
+        try {
+          const result = await api.toggleProgramNotifications()
+          // Server is source of truth — sync back in case something's off
+          setProgramStatus(prev => prev ? { ...prev, notificationsEnabled: result.notificationsEnabled } : prev)
+          toast.success('ההתראות כובו')
+        } catch {
+          revert()
+          toast.error('לא הצלחתי לכבות התראות, נסו שוב')
         }
         return
       }
-      await api.saveFcmToken(token)
-      // saveFcmToken also sets notificationsEnabled=true on the server, so no need to call toggle
-      setProgramStatus(prev => prev ? { ...prev, notificationsEnabled: true } : prev)
-      toast.success('ההתראות הופעלו ✓')
-    } catch (e) {
-      console.error('Failed to enable notifications:', e)
-      toast.error('קרתה שגיאה בהפעלת התראות')
+
+      // Turning ON — permission + token FIRST, only then flip server flag
+      if (typeof Notification === 'undefined') {
+        revert()
+        toast.error('הדפדפן לא תומך בהתראות')
+        return
+      }
+
+      // Quick iOS PWA check: iOS only allows push inside an installed PWA
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream
+      const isStandalone = window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone
+      if (isIOS && !isStandalone) {
+        revert()
+        toast.error('באייפון צריך קודם להוסיף את האתר למסך הבית ולפתוח משם')
+        return
+      }
+
+      try {
+        // Force-refresh the token: delete any cached one (which may be stale/dead)
+        // and generate a brand new one. Prevents Chrome from returning the same
+        // expired token over and over.
+        const { refreshNotificationToken } = await import('../../shared/firebase.js')
+        const token = await refreshNotificationToken()
+        if (!token) {
+          revert()
+          if (Notification.permission === 'denied') {
+            toast.error('ההתראות חסומות — יש לאשר אותן בהגדרות הדפדפן')
+          } else {
+            toast.error('לא הצלחתי לייצר Token, נסו שוב')
+          }
+          return
+        }
+        await api.saveFcmToken(token)
+        // saveFcmToken also sets notificationsEnabled=true on the server, so the
+        // optimistic state is already correct. Just mark the token as present.
+        setProgramStatus(prev => prev ? { ...prev, notificationsEnabled: true, hasFcmToken: true } : prev)
+        toast.success('ההתראות הופעלו ✓')
+      } catch (e) {
+        revert()
+        console.error('Failed to enable notifications:', e)
+        toast.error('קרתה שגיאה בהפעלת התראות')
+      }
+    } finally {
+      togglingNotificationsRef.current = false
     }
   }
 
