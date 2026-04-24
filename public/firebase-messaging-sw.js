@@ -15,15 +15,16 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging()
 
+// Claim all clients as soon as the SW activates — faster delivery on first install
+self.addEventListener('install', () => self.skipWaiting())
+self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()))
+
 messaging.onBackgroundMessage((payload) => {
   const title = payload.notification?.title || 'הורות בכיס'
   const options = {
     body: payload.notification?.body || 'יש לך משימה חדשה בתוכנית!',
-    icon: '/logo.png',
-    badge: '/logo.png',
     dir: 'rtl',
     lang: 'he',
-    tag: 'program-reminder',
     data: payload.data,
   }
 

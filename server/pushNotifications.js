@@ -73,10 +73,8 @@ export async function sendPushNotification(fcmToken, title, body) {
         notification: { title, body },
         webpush: {
           notification: {
-            icon: '/logo.png',
             dir: 'rtl',
             lang: 'he',
-            tag: 'program-reminder',
             requireInteraction: false,
           },
           fcm_options: {
