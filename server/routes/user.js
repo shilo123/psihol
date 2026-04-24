@@ -250,6 +250,7 @@ router.post('/fcm-token', async (req, res) => {
     const { token } = req.body;
     if (!token) return res.status(400).json({ error: 'Token is required' });
     await saveFcmToken(user.id, token);
+    console.log(`[FCM] Token saved for user ${user.id} (${user.email}): ${token.slice(0, 20)}…`);
     res.json({ success: true });
   } catch (error) {
     console.error('Save FCM token error:', error);

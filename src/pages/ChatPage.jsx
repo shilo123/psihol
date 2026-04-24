@@ -4,6 +4,7 @@ import { useAuthStore } from '../../shared/authStore'
 import { useChatStore } from '../../shared/chatStore'
 import { formatTime, renderMarkdown, extractAddChildData, extractUpdateChildData, extractFollowups, extractCommonMistake, PERSONALITIES } from '../../shared/constants'
 import { api } from '../../shared/api'
+import { toast } from '../../shared/toastStore'
 import allSuggestions from '../../shared/suggestions.json'
 
 /* ------------------------------------------------------------------ */
@@ -985,7 +986,9 @@ export default function ChatPage() {
     setProgramStatus({
       active: true,
       currentDay: 1,
+      totalDays: result.totalDays,
       dayContent: result.dayContent,
+      availableDays: result.availableDays,
       programTitle: result.programTitle,
       notificationsEnabled,
     })
@@ -1004,16 +1007,52 @@ export default function ChatPage() {
   }
 
   async function handleToggleNotifications() {
-    const result = await api.toggleProgramNotifications()
-    if (result.notificationsEnabled) {
-      // If enabling, request permission and save FCM token
+    const currentlyEnabled = !!programStatus?.notificationsEnabled
+
+    if (currentlyEnabled) {
+      // Turning OFF — simple server toggle
+      try {
+        const result = await api.toggleProgramNotifications()
+        setProgramStatus(prev => prev ? { ...prev, notificationsEnabled: result.notificationsEnabled } : prev)
+      } catch {
+        toast.error('לא הצלחתי לכבות התראות, נסו שוב')
+      }
+      return
+    }
+
+    // Turning ON — permission + token FIRST, only then flip server flag
+    if (typeof Notification === 'undefined') {
+      toast.error('הדפדפן לא תומך בהתראות')
+      return
+    }
+
+    // Quick iOS PWA check: iOS only allows push inside an installed PWA
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream
+    const isStandalone = window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone
+    if (isIOS && !isStandalone) {
+      toast.error('באייפון צריך קודם להוסיף את האתר למסך הבית ולפתוח משם')
+      return
+    }
+
+    try {
       const { requestNotificationPermission } = await import('../../shared/firebase.js')
       const token = await requestNotificationPermission()
-      if (token) {
-        await api.saveFcmToken(token)
+      if (!token) {
+        if (Notification.permission === 'denied') {
+          toast.error('ההתראות חסומות — יש לאשר אותן בהגדרות הדפדפן')
+        } else {
+          toast.error('לא הצלחתי לייצר Token, נסו שוב')
+        }
+        return
       }
+      await api.saveFcmToken(token)
+      // saveFcmToken also sets notificationsEnabled=true on the server, so no need to call toggle
+      setProgramStatus(prev => prev ? { ...prev, notificationsEnabled: true } : prev)
+      toast.success('ההתראות הופעלו ✓')
+    } catch (e) {
+      console.error('Failed to enable notifications:', e)
+      toast.error('קרתה שגיאה בהפעלת התראות')
     }
-    setProgramStatus(prev => prev ? { ...prev, notificationsEnabled: result.notificationsEnabled } : prev)
   }
 
   // Navigate to onboarding after login if not onboarded (skip for guests)
