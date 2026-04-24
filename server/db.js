@@ -413,6 +413,21 @@ export async function incrementBoundaryCount(userId) {
   return user?.boundaryQuestionCount || 0;
 }
 
+// Mark a program as completed: persist the completion record and clear the active program.
+// Safe to call multiple times — $addToSet guarantees no duplicate entries.
+export async function markProgramCompleted(userId, programId) {
+  const database = await getDb();
+  await database.collection('users').updateOne(
+    { id: userId },
+    {
+      $addToSet: {
+        completedPrograms: { programId, completedAt: new Date().toISOString() }
+      },
+      $unset: { program: '' }
+    }
+  );
+}
+
 export async function saveFcmToken(userId, token) {
   const database = await getDb();
   await database.collection('users').updateOne({ id: userId }, {

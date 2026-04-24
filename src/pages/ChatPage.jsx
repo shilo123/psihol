@@ -976,12 +976,14 @@ export default function ChatPage() {
     }
   }, [isLoggedIn, user, isGuest])
 
-  // Show program suggestion popup when boundary count reaches 2
+  // Show program suggestion popup when boundary count reaches 2 — but not if the
+  // user already completed the boundaries program or is inside an active one.
   useEffect(() => {
-    if (boundaryCount >= 2 && programStatus && !programStatus.active && !programStatus.dismissed && !showProgramPopup && !isGuest) {
-      setShowProgramPopup(true)
-    }
-  }, [boundaryCount, programStatus, isGuest])
+    if (!programStatus || isGuest || showProgramPopup) return
+    if (programStatus.active || programStatus.dismissed) return
+    if (programStatus.completedPrograms?.includes('boundaries')) return
+    if (boundaryCount >= 2) setShowProgramPopup(true)
+  }, [boundaryCount, programStatus, isGuest, showProgramPopup])
 
   // Program handlers
   async function handleStartProgram() {

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { getUserFromToken, updateUser, findUserById, getDb, startProgram, calculateProgramDay, dismissProgram, saveFcmToken } from '../db.js';
+import { getUserFromToken, updateUser, findUserById, getDb, startProgram, calculateProgramDay, dismissProgram, saveFcmToken, markProgramCompleted } from '../db.js';
 import boundariesProgram from '../../shared/programs/boundaries.json' with { type: 'json' };
 
 // Resolve gendered fields in program day data based on parent gender
@@ -137,16 +137,31 @@ router.get('/program/status', async (req, res) => {
   try {
     const user = await getUserFromToken(req);
     if (!user) return res.status(401).json({ error: 'Unauthorized' });
-    if (!user.program) return res.json({ active: false, dismissed: !!user.programDismissed, boundaryQuestionCount: user.boundaryQuestionCount || 0 });
+
+    const completedProgramIds = (user.completedPrograms || []).map(p => p.programId);
+
+    if (!user.program) {
+      return res.json({
+        active: false,
+        dismissed: !!user.programDismissed,
+        boundaryQuestionCount: user.boundaryQuestionCount || 0,
+        completedPrograms: completedProgramIds,
+      });
+    }
 
     // Calculate day automatically from start date
     const { day: currentDay, completed } = calculateProgramDay(user.program.startedAt);
 
     if (completed) {
-      // Program finished (past day 5) — mark as done
-      const db = await getDb();
-      await db.collection('users').updateOne({ id: user.id }, { $unset: { program: '' } });
-      return res.json({ active: false, completed: true, dismissed: false, boundaryQuestionCount: user.boundaryQuestionCount || 0 });
+      // Program finished (past day 5) — record completion and clear the active program.
+      await markProgramCompleted(user.id, user.program.programId);
+      return res.json({
+        active: false,
+        completed: true,
+        dismissed: false,
+        boundaryQuestionCount: user.boundaryQuestionCount || 0,
+        completedPrograms: [...new Set([...completedProgramIds, user.program.programId])],
+      });
     }
 
     const rawDay = boundariesProgram.days.find(d => d.day === currentDay) || null;
@@ -172,6 +187,7 @@ router.get('/program/status', async (req, res) => {
       boundaryQuestionCount: user.boundaryQuestionCount || 0,
       notificationsEnabled: !!user.program.notificationsEnabled,
       hasFcmToken: !!user.program.fcmToken,
+      completedPrograms: completedProgramIds,
     });
   } catch (error) {
     console.error('Get program status error:', error);
